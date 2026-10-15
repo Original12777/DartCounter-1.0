@@ -2,7 +2,13 @@
 <html lang="de" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#080d1a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="application-name" content="DartPro">
+    <link rel="manifest" href="./manifest.json">
     <title>DartPro Analytics & Scorer</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,8 +18,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Google Fonts: Inter & JetBrains Mono -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
-    <link rel="manifest" href="./manifest.json">
-    
+
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -36,11 +41,22 @@
     </script>
 
     <style>
-        body {
+        html, body {
             background-color: #080d1a;
             color: #f8fafc;
             overflow-x: hidden;
+            overscroll-behavior-y: contain;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        input, select, textarea {
+            user-select: text;
+            -webkit-user-select: text;
+        }
+        button {
+            touch-action: manipulation;
         }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #0f172a; }
@@ -108,7 +124,7 @@
                     <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
                         <i class="fa-solid fa-users text-amber-400 mr-1"></i> Vergleichsspieler (Split-Screen)
                     </label>
-                    <select id="global-player-select-b" onchange="renderActiveViews()" class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500 font-medium">
+                    <select id="global-player-select-b" onchange="handleGlobalPlayerChangeB(this.value)" class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500 font-medium">
                         <!-- Populated via JS -->
                     </select>
                 </div>
@@ -236,194 +252,307 @@
                         </div>
                     </div>
 
-                    <div class="md:col-span-2 lg:col-span-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                            <div>
-                                <span class="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold">
-                                    <i class="fa-solid fa-bullseye mr-1"></i> Anwurf-Ermittlung (Wer beginnt Leg 1?)
-                                </span>
-                                <h4 class="text-sm font-bold text-white">Startspieler per Münzwurf, Ausbullen oder manuell bestimmen</h4>
+                    <div class="md:col-span-2 lg:col-span-4 bg-slate-900/95 border border-emerald-500/30 rounded-2xl p-4 space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                                    <i class="fa-solid fa-robot text-base"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Solo-Training & Sparring</span>
+                                    <h4 class="text-sm font-bold text-white">KI-Dartbot als Gegner aktivieren</h4>
+                                </div>
                             </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <button type="button" onclick="triggerCoinToss()" class="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition">
-                                    <i class="fa-solid fa-coins"></i> Münzwurf auslosen
-                                </button>
-                                <button type="button" onclick="openBullOffModal()" class="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition">
-                                    <i class="fa-solid fa-crosshairs"></i> Ausbullen (Bullseye-Wurf)
-                                </button>
-                            </div>
+                            <label class="inline-flex items-center gap-2.5 cursor-pointer bg-slate-950 px-3.5 py-2 rounded-xl border border-slate-800">
+                                <input type="checkbox" id="setup-bot-enabled" onchange="toggleBotSetupPanel()" class="accent-emerald-500 w-4 h-4">
+                                <span class="text-xs font-bold text-white">Gegen Dartbot spielen</span>
+                            </label>
                         </div>
 
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
-                            <div id="starter-status-banner" class="text-xs text-slate-300 flex items-center gap-2">
-                                <i class="fa-solid fa-circle-info text-emerald-400"></i>
-                                <span>Wähle den Startspieler direkt aus oder nutze Münzwurf / Ausbullen:</span>
+                        <div id="setup-bot-config" class="hidden pt-3 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800">
+                                <div class="flex justify-between items-center text-xs mb-1.5">
+                                    <span class="text-slate-400 font-semibold"><i class="fa-solid fa-gauge-high text-emerald-400 mr-1"></i> Dartbot 3-Dart-Average:</span>
+                                    <span id="bot-avg-label" class="font-mono font-extrabold text-emerald-400 text-sm">65.0 Avg</span>
+                                </div>
+                                <input type="range" id="setup-bot-avg" min="35" max="110" step="1" value="65" oninput="updateBotSlidersUI()" class="w-full accent-emerald-500 cursor-pointer">
+                                <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
+                                    <span>35 (Beginner)</span>
+                                    <span>65 (Club)</span>
+                                    <span>85 (County)</span>
+                                    <span>110 (PDC Tour)</span>
+                                </div>
                             </div>
-                            <div id="setup-starter-pills" class="flex flex-wrap items-center gap-2">
-                                <!-- Starter radio pills injected via JS -->
+                            <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800">
+                                <div class="flex justify-between items-center text-xs mb-1.5">
+                                    <span class="text-slate-400 font-semibold"><i class="fa-solid fa-bullseye text-amber-400 mr-1"></i> Dartbot Checkout-Quote (Doppel):</span>
+                                    <span id="bot-co-label" class="font-mono font-extrabold text-amber-400 text-sm">30%</span>
+                                </div>
+                                <input type="range" id="setup-bot-co" min="5" max="90" step="5" value="30" oninput="updateBotSlidersUI()" class="w-full accent-amber-500 cursor-pointer">
+                                <div class="flex justify-between text-[10px] font-mono text-slate-500 mt-1">
+                                    <span>5%</span>
+                                    <span>25% (Liga)</span>
+                                    <span>45% (Pro)</span>
+                                    <span>90% (Clinical)</span>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="md:col-span-2 lg:col-span-4 flex justify-end">
-                        <button onclick="startNewMatch(true)" class="w-full md:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg glow-emerald transition transform hover:scale-[1.01]">
-                            <i class="fa-solid fa-expand mr-1.5"></i> Match im Vollbild starten ("Game On!")
+                    <div class="md:col-span-2 lg:col-span-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-400 font-bold">Anwurf-Reihenfolge (Throw First)</span>
+                                <h4 class="text-sm font-bold text-white">Wer beginnt das Match?</h4>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" onclick="triggerCoinToss()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-coins"></i> Münzwurf auslosen
+                                </button>
+                                <button type="button" onclick="openBullOffModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-bullseye"></i> Ausbullen (Bullseye-Wurf)
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
+                            <div id="setup-starter-pills" class="flex flex-wrap gap-2">
+                                <!-- Injected via JS -->
+                            </div>
+                            <div id="starter-status-banner" class="text-xs font-mono text-slate-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-info-circle text-emerald-400"></i> <span>Wähle den Startspieler oder lose aus</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 lg:col-span-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-2">
+                        <button type="button" onclick="startNewMatch(false)" class="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-sm border border-slate-700 flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-play text-emerald-400"></i> Match im Standard-Layout starten
+                        </button>
+                        <button type="button" onclick="startNewMatch(true)" class="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/60 transition">
+                            <i class="fa-solid fa-expand"></i> Match jetzt im Vollbild starten
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Fullscreen Match Top Control Bar -->
-            <div id="fullscreen-match-topbar" class="hidden broadcast-card rounded-2xl px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-emerald-500">
-                <div class="flex items-center gap-3">
-                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                        <i class="fa-solid fa-tv"></i>
-                    </div>
-                    <div>
-                        <div class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">Fokussierter Vollbild-Matchmodus</div>
-                        <div id="fs-match-title" class="text-base font-extrabold text-white">Live Match Arena</div>
-                    </div>
-                </div>
-                <div class="flex flex-wrap items-center gap-2.5">
-                    <button onclick="undoLastDart()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-rotate-left text-amber-400"></i> Wurf Rückgängig
+            <!-- ZERO-SCROLL LIVE MATCH ARENA CONTAINER -->
+            <div id="live-match-arena" class="broadcast-card rounded-3xl overflow-hidden flex flex-col justify-between h-[calc(100dvh-1.5rem)] max-h-[900px] min-h-[600px] bg-slate-950 border border-slate-800 shadow-2xl mx-auto max-w-2xl">
+                
+                <!-- 1. Top Match Header Bar (Exit | First to X Legs | Board/Settings) -->
+                <div class="px-3.5 py-2.5 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between shrink-0">
+                    <button onclick="exitFullscreenMatchToMenu()" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 flex items-center justify-center transition" title="Match abbrechen / Zurück zum Menü">
+                        <i class="fa-solid fa-arrow-right-from-bracket rotate-180"></i>
                     </button>
-                    <button onclick="exitFullscreenMatchToMenu()" class="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold text-xs border border-rose-500/40 flex items-center gap-1.5 transition">
-                        <i class="fa-solid fa-right-from-bracket"></i> Match abbrechen / Hauptmenü
+                    <div class="text-center">
+                        <div id="live-mode-badge" class="font-mono font-extrabold text-base sm:text-lg tracking-wider text-white uppercase leading-tight">FIRST TO 3 LEGS</div>
+                        <div id="live-submode-label" class="text-[10px] font-mono uppercase tracking-widest text-slate-400">501 • DOUBLE OUT</div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="toggleCompactBoardOverlay()" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-800 flex items-center justify-center transition" title="Dartboard / Tastatur umschalten">
+                            <i class="fa-solid fa-bullseye"></i>
+                        </button>
+                        <button onclick="exitFullscreenMatchToMenu()" class="w-9 h-9 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 flex items-center justify-center transition" title="Match-Einstellungen">
+                            <i class="fa-solid fa-gear"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. Split Player Scorecards (Smaragdgrün links vs. Amber rechts) -->
+                <div id="live-player-cards" class="grid grid-cols-2 mx-3 mt-1.5 rounded-2xl overflow-hidden shadow-xl border border-slate-800/80 shrink-0">
+                    <!-- Dynamically populated by renderLiveScorerUI() -->
+                </div>
+
+                <!-- 3. Active Turn Indicator & Dynamic Live Checkout Route Banner -->
+                <div class="px-3.5 py-1.5 flex items-center justify-between gap-2 shrink-0 min-h-[36px]">
+                    <div id="live-turn-indicator" class="font-mono font-extrabold text-xs sm:text-sm tracking-wide uppercase text-emerald-400 truncate">
+                        SPIELER AM OCHE
+                    </div>
+                    <div id="pdc-checkout-banner" class="hidden flex items-center gap-1.5 bg-slate-900/95 border border-amber-500/40 px-2.5 py-1 rounded-xl shrink-0">
+                        <span id="pdc-route-subtext" class="text-[10px] font-mono text-slate-400 font-bold">Finish:</span>
+                        <div id="pdc-route-pills" class="flex items-center gap-1"></div>
+                    </div>
+                </div>
+
+                <!-- 4. Current Turn Pill Bar (Mode Switcher | 3 Dart Slots | Submit/Total) -->
+                <div class="mx-3 mb-1.5 bg-slate-900 border border-slate-700/80 rounded-full p-1 flex items-center justify-between shadow-inner shrink-0 gap-1">
+                    <div class="flex items-center bg-slate-950 rounded-full p-0.5 border border-slate-800 shrink-0">
+                        <button onclick="setScorerInputView('pro')" id="input-mode-btn-pro" class="px-2.5 h-9 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] flex items-center gap-1 transition" title="Pro-Modus (Dart für Dart)">
+                            <i class="fa-solid fa-table-cells"></i> <span class="hidden sm:inline">Pro</span>
+                        </button>
+                        <button onclick="setScorerInputView('quick')" id="input-mode-btn-quick" class="px-2.5 h-9 rounded-full text-slate-400 hover:text-white font-bold text-[11px] flex items-center gap-1 transition" title="Schnell-Tastatur (Aufnahme-Summe)">
+                            <i class="fa-solid fa-bolt"></i> <span class="hidden sm:inline">Summe</span>
+                        </button>
+                        <button onclick="setScorerInputView('board')" id="input-mode-btn-board" class="px-2.5 h-9 rounded-full text-slate-400 hover:text-white font-bold text-[11px] flex items-center gap-1 transition" title="Interaktives SVG-Dartboard">
+                            <i class="fa-solid fa-bullseye"></i>
+                        </button>
+                    </div>
+                    <div id="current-turn-slots" class="flex-1 grid grid-cols-3 divide-x divide-slate-700/80 text-center px-1">
+                        <div class="h-9 flex items-center justify-center font-mono font-extrabold text-sm text-slate-400">-</div>
+                        <div class="h-9 flex items-center justify-center font-mono font-extrabold text-sm text-slate-400">-</div>
+                        <div class="h-9 flex items-center justify-center font-mono font-extrabold text-sm text-slate-400">-</div>
+                    </div>
+                    <button onclick="advanceTurnManuallyOrConfirm()" id="current-turn-sum" class="px-3.5 h-9 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-extrabold text-xs uppercase tracking-wider transition shadow-md shrink-0 flex items-center justify-center min-w-[72px]">
+                        = 0
                     </button>
                 </div>
-            </div>
 
-            <!-- Main Scorer Grid -->
-            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-                <!-- Left Column -->
-                <div class="xl:col-span-7 space-y-5">
-                    <div class="broadcast-card rounded-2xl p-4 sm:p-5 border-l-4 border-l-emerald-500">
-                        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
-                            <div class="flex items-center gap-3">
-                                <span id="live-mode-badge" class="px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-xs">501 DO - FT 3 LEGS</span>
-                                <span id="live-turn-indicator" class="text-sm text-slate-300 font-medium">Am Oche: <strong class="text-white">-</strong></span>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <span class="text-xs text-slate-400 uppercase font-semibold">Aufnahme:</span>
-                                <div id="current-turn-slots" class="flex items-center gap-2">
-                                    <div class="w-12 sm:w-14 h-9 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center font-mono font-bold text-sm text-slate-400">-</div>
-                                    <div class="w-12 sm:w-14 h-9 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center font-mono font-bold text-sm text-slate-400">-</div>
-                                    <div class="w-12 sm:w-14 h-9 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center font-mono font-bold text-sm text-slate-400">-</div>
-                                </div>
-                                <div id="current-turn-sum" class="ml-2 px-3 py-1.5 rounded-lg bg-slate-800 font-mono font-extrabold text-amber-400 text-sm">= 0</div>
-                            </div>
+                <!-- 5. Input Area: Pro Keypad OR Quick-Score Sum Keypad OR Interactive SVG Dartboard -->
+                <div class="flex-1 flex flex-col overflow-hidden bg-slate-900/90 border-t border-slate-800">
+                    
+                    <!-- Option A: Compact Pro Keypad (Dart-by-Dart) -->
+                    <div id="scorer-keypad-wrapper" class="flex-1 flex flex-col justify-between">
+                        <!-- Multiplier Row (Single | Double | Treble | Bull 50 | Outer 25) -->
+                        <div class="grid grid-cols-5 border-b border-slate-800 bg-slate-950/90 shrink-0">
+                            <button onclick="setKeypadMultiplier(1)" id="mult-btn-1" class="py-2.5 text-xs font-bold uppercase tracking-wider text-emerald-400 border-b-2 border-emerald-400 bg-slate-900/80 transition">Single</button>
+                            <button onclick="setKeypadMultiplier(2)" id="mult-btn-2" class="py-2.5 text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white border-b-2 border-transparent transition">Double</button>
+                            <button onclick="setKeypadMultiplier(3)" id="mult-btn-3" class="py-2.5 text-xs font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 border-b-2 border-transparent transition">Treble</button>
+                            <button onclick="recordDartThrow(25, 2, 'BULL', 0, 0)" class="py-1.5 flex flex-col items-center justify-center text-[11px] font-bold text-rose-400 hover:bg-slate-800/60 border-l border-slate-800 transition">
+                                <span>Bull</span><span class="font-mono text-[10px] text-slate-400">50</span>
+                            </button>
+                            <button onclick="recordDartThrow(25, 1, 'S25', 0, 12)" class="py-1.5 flex flex-col items-center justify-center text-[11px] font-bold text-emerald-400 hover:bg-slate-800/60 border-l border-slate-800 transition">
+                                <span>Outer</span><span class="font-mono text-[10px] text-slate-400">25</span>
+                            </button>
                         </div>
 
-                        <!-- PDC Checkout Banner -->
-                        <div id="pdc-checkout-banner" class="hidden p-3.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-9 h-9 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-extrabold text-sm">
-                                    <i class="fa-solid fa-crown"></i>
-                                </div>
-                                <div>
-                                    <div class="text-[11px] font-mono uppercase tracking-wider text-amber-300 font-bold">Empfohlener PDC Checkout-Weg</div>
-                                    <div id="pdc-route-subtext" class="text-xs text-slate-300">Finish in aktuellen Darts möglich</div>
-                                </div>
-                            </div>
-                            <div id="pdc-route-pills" class="flex items-center gap-2"></div>
+                        <!-- 1-20 Number Grid (5 Columns x 4 Rows filling space) -->
+                        <div class="flex-1 grid grid-cols-5 grid-rows-4 divide-x divide-y divide-slate-800/90 bg-slate-900">
+                            <button onclick="handleKeypadNumber(1)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">1</button>
+                            <button onclick="handleKeypadNumber(2)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">2</button>
+                            <button onclick="handleKeypadNumber(3)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">3</button>
+                            <button onclick="handleKeypadNumber(4)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">4</button>
+                            <button onclick="handleKeypadNumber(5)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">5</button>
+                            <button onclick="handleKeypadNumber(6)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">6</button>
+                            <button onclick="handleKeypadNumber(7)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">7</button>
+                            <button onclick="handleKeypadNumber(8)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">8</button>
+                            <button onclick="handleKeypadNumber(9)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">9</button>
+                            <button onclick="handleKeypadNumber(10)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">10</button>
+                            <button onclick="handleKeypadNumber(11)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">11</button>
+                            <button onclick="handleKeypadNumber(12)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">12</button>
+                            <button onclick="handleKeypadNumber(13)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">13</button>
+                            <button onclick="handleKeypadNumber(14)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">14</button>
+                            <button onclick="handleKeypadNumber(15)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">15</button>
+                            <button onclick="handleKeypadNumber(16)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">16</button>
+                            <button onclick="handleKeypadNumber(17)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">17</button>
+                            <button onclick="handleKeypadNumber(18)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">18</button>
+                            <button onclick="handleKeypadNumber(19)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-white transition">19</button>
+                            <button onclick="handleKeypadNumber(20)" class="hover:bg-slate-800 active:bg-emerald-500/20 font-mono font-extrabold text-lg sm:text-xl text-emerald-400 transition">20</button>
                         </div>
-                    </div>
 
-                    <!-- Player Scorecards -->
-                    <div id="live-player-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
-
-                    <!-- Cricket Board Container -->
-                    <div id="cricket-board-container" class="hidden broadcast-card rounded-2xl p-5">
-                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 mb-3 flex items-center gap-2">
-                            <i class="fa-solid fa-table-cells"></i> Standard Cricket Übersicht (15 - 20 & Bull)
-                        </h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-center border-collapse">
-                                <thead id="cricket-thead" class="bg-slate-900/90 text-xs uppercase text-slate-400 border-b border-slate-800"></thead>
-                                <tbody id="cricket-tbody" class="divide-y divide-slate-800/70 font-mono text-sm"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Throw Log Ticker -->
-                    <div class="broadcast-card rounded-2xl p-4">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                <i class="fa-solid fa-clock-rotate-left text-emerald-400 mr-1"></i> Wurf-Protokoll (Aktuelles Leg)
-                            </span>
-                            <span id="leg-dart-counter" class="text-xs font-mono text-slate-400">0 Darts im Leg</span>
-                        </div>
-                        <div id="live-throw-log" class="flex gap-2 overflow-x-auto py-1 text-xs font-mono"></div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Board & Keypad -->
-                <div class="xl:col-span-5 broadcast-card rounded-2xl p-4 sm:p-5 space-y-5">
-                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-                        <div>
-                            <h3 class="font-bold text-white text-base">Präzisions-Wurfeingabe</h3>
-                            <p class="text-xs text-slate-400">Board antippen oder Tastenfeld nutzen</p>
-                        </div>
-                        <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
-                            <button onclick="setScorerInputView('both')" id="input-mode-both" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950">Beides</button>
-                            <button onclick="setScorerInputView('board')" id="input-mode-board" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">Board</button>
-                            <button onclick="setScorerInputView('keypad')" id="input-mode-keypad" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">Keypad</button>
-                        </div>
-                    </div>
-
-                    <div id="scorer-board-wrapper" class="flex flex-col items-center justify-center relative">
-                        <div class="w-full max-w-[380px] aspect-square relative flex items-center justify-center">
-                            <svg id="scorer-dartboard-svg" viewBox="-220 -220 440 440" class="w-full h-full select-none drop-shadow-2xl"></svg>
-                        </div>
-                        <div class="flex items-center justify-between w-full mt-3 px-2 text-xs text-slate-400">
-                            <span id="board-hover-indicator" class="font-mono text-emerald-400 font-semibold">Sektor wählen...</span>
-                            <button onclick="recordDartThrow(0, 0, 'MISS', 195, -195)" class="px-3.5 py-2 rounded-xl bg-rose-500/25 hover:bg-rose-500/40 text-rose-300 border border-rose-500/40 font-bold transition">
-                                <i class="fa-solid fa-xmark mr-1"></i> Miss / 0
+                        <!-- Bottom Action Row (Undo | MISS | Quick Mode Toggle) -->
+                        <div class="grid grid-cols-12 border-t border-slate-800 bg-slate-950 shrink-0 h-13">
+                            <button onclick="undoLastDart()" class="col-span-4 py-3 hover:bg-slate-900 active:bg-slate-800 text-amber-400 flex items-center justify-center gap-2 font-bold text-xs border-r border-slate-800 transition">
+                                <i class="fa-solid fa-reply text-base"></i> <span>UNDO</span>
+                            </button>
+                            <button onclick="recordDartThrow(0, 0, 'MISS', 190, -190)" class="col-span-5 py-3 hover:bg-slate-900 active:bg-rose-500/20 text-white font-mono font-extrabold text-base tracking-widest border-r border-slate-800 transition">
+                                MISS
+                            </button>
+                            <button onclick="setScorerInputView('quick')" class="col-span-3 py-2 flex items-center justify-center bg-slate-950 hover:bg-slate-900 transition" title="Schnell-Tastatur (Aufnahme-Summe)">
+                                <span class="px-2.5 h-9 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-[11px] flex items-center justify-center gap-1 shadow">
+                                    <i class="fa-solid fa-bolt"></i> 180
+                                </span>
                             </button>
                         </div>
                     </div>
 
-                    <div id="scorer-keypad-wrapper" class="space-y-3 pt-2 border-t border-slate-800/80">
-                        <div class="grid grid-cols-3 gap-2">
-                            <button onclick="setKeypadMultiplier(1)" id="mult-btn-1" class="py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-emerald-500 text-slate-950 shadow">Single (1x)</button>
-                            <button onclick="setKeypadMultiplier(2)" id="mult-btn-2" class="py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-800 text-rose-400 border border-rose-500/30 hover:bg-slate-700">Double (2x)</button>
-                            <button onclick="setKeypadMultiplier(3)" id="mult-btn-3" class="py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-800 text-amber-400 border border-amber-500/30 hover:bg-slate-700">Triple (3x)</button>
+                    <!-- Option B: Quick-Score Turn Sum Keypad (1-Tap 26, 41, 45, 60, 81, 85, 100, 140, 180 + Custom Sum) -->
+                    <div id="scorer-quick-wrapper" class="hidden flex-1 flex flex-col justify-between bg-slate-950">
+                        <!-- Custom Sum Display & Direct Input Bar -->
+                        <div class="px-3 py-2 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-2 shrink-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-mono uppercase text-slate-400">Aufnahme:</span>
+                                <span id="quick-custom-buffer" class="px-3 py-1 rounded-lg bg-slate-900 border border-slate-700 font-mono font-extrabold text-base text-emerald-400 min-w-[54px] text-center">0</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="appendQuickDigit('clear')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold">C</button>
+                                <button onclick="submitQuickTurnScore(0, true)" class="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-mono font-bold text-xs">BUST / 0</button>
+                                <button onclick="submitCustomQuickBuffer()" class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono font-extrabold text-xs shadow">OK</button>
+                            </div>
                         </div>
-                        <div class="grid grid-cols-5 gap-1.5">
-                            <button onclick="handleKeypadNumber(1)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">1</button>
-                            <button onclick="handleKeypadNumber(2)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">2</button>
-                            <button onclick="handleKeypadNumber(3)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">3</button>
-                            <button onclick="handleKeypadNumber(4)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">4</button>
-                            <button onclick="handleKeypadNumber(5)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">5</button>
-                            <button onclick="handleKeypadNumber(6)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">6</button>
-                            <button onclick="handleKeypadNumber(7)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">7</button>
-                            <button onclick="handleKeypadNumber(8)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">8</button>
-                            <button onclick="handleKeypadNumber(9)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">9</button>
-                            <button onclick="handleKeypadNumber(10)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">10</button>
-                            <button onclick="handleKeypadNumber(11)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">11</button>
-                            <button onclick="handleKeypadNumber(12)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">12</button>
-                            <button onclick="handleKeypadNumber(13)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">13</button>
-                            <button onclick="handleKeypadNumber(14)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">14</button>
-                            <button onclick="handleKeypadNumber(15)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">15</button>
-                            <button onclick="handleKeypadNumber(16)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">16</button>
-                            <button onclick="handleKeypadNumber(17)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">17</button>
-                            <button onclick="handleKeypadNumber(18)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">18</button>
-                            <button onclick="handleKeypadNumber(19)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">19</button>
-                            <button onclick="handleKeypadNumber(20)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-emerald-400 border border-emerald-500/40">20</button>
+
+                        <!-- Preset 1-Tap Turn Totals Grid (4x3) -->
+                        <div class="flex-1 grid grid-cols-4 grid-rows-3 divide-x divide-y divide-slate-800 bg-slate-900">
+                            <button onclick="submitQuickTurnScore(26)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-slate-200">26</span>
+                                <span class="text-[9px] text-slate-500 font-mono">Classic</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(41)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-slate-200">41</span>
+                                <span class="text-[9px] text-slate-500 font-mono">20-20-1</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(45)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-slate-200">45</span>
+                                <span class="text-[9px] text-slate-500 font-mono">19s Mix</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(60)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-emerald-400">60</span>
+                                <span class="text-[9px] text-emerald-500/70 font-mono">3x S20</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(81)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-white">81</span>
+                                <span class="text-[9px] text-slate-500 font-mono">T19-24</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(85)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-white">85</span>
+                                <span class="text-[9px] text-slate-500 font-mono">T20-25</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(95)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-white">95</span>
+                                <span class="text-[9px] text-slate-500 font-mono">T19-38</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(100)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-amber-400">100</span>
+                                <span class="text-[9px] text-amber-500/80 font-mono">TON</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(121)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-amber-300">121</span>
+                                <span class="text-[9px] text-slate-500 font-mono">High</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(140)" class="hover:bg-slate-800 active:bg-emerald-500/20 flex flex-col items-center justify-center transition">
+                                <span class="font-mono font-extrabold text-lg text-amber-400">140</span>
+                                <span class="text-[9px] text-amber-500/80 font-mono">2x T20</span>
+                            </button>
+                            <button onclick="submitQuickTurnScore(180)" class="hover:bg-slate-800 active:bg-rose-500/20 flex flex-col items-center justify-center transition bg-rose-500/10">
+                                <span class="font-mono font-extrabold text-xl text-rose-400">180</span>
+                                <span class="text-[9px] text-rose-400 font-mono font-bold">MAXIMUM</span>
+                            </button>
+                            <button onclick="setScorerInputView('pro')" class="hover:bg-slate-800 flex flex-col items-center justify-center text-emerald-400 transition">
+                                <i class="fa-solid fa-crosshairs text-base"></i>
+                                <span class="text-[9px] font-bold uppercase mt-0.5">Einzel-Dart</span>
+                            </button>
                         </div>
-                        <div class="grid grid-cols-4 gap-2 pt-1">
-                            <button onclick="recordDartThrow(25, 1, 'S25', 0, 12)" class="py-3 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-xs">25 (Bull)</button>
-                            <button onclick="recordDartThrow(25, 2, 'BULL', 0, 0)" class="py-3 rounded-xl bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-300 font-mono font-bold text-xs">50 (Bulls.)</button>
-                            <button onclick="recordDartThrow(0, 0, 'MISS', 190, -190)" class="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono font-bold text-xs">0 (Miss)</button>
-                            <button onclick="undoLastDart()" class="py-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs"><i class="fa-solid fa-undo"></i> Zurück</button>
+
+                        <!-- Compact Number Pad 0-9 for Custom Sum Input -->
+                        <div class="grid grid-cols-11 divide-x divide-slate-800 border-t border-slate-800 bg-slate-950 shrink-0 h-12">
+                            <button onclick="undoLastDart()" class="col-span-2 text-amber-400 font-bold text-xs flex items-center justify-center hover:bg-slate-900"><i class="fa-solid fa-reply"></i></button>
+                            <button onclick="appendQuickDigit(1)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">1</button>
+                            <button onclick="appendQuickDigit(2)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">2</button>
+                            <button onclick="appendQuickDigit(3)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">3</button>
+                            <button onclick="appendQuickDigit(4)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">4</button>
+                            <button onclick="appendQuickDigit(5)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">5</button>
+                            <button onclick="appendQuickDigit(6)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">6</button>
+                            <button onclick="appendQuickDigit(7)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">7</button>
+                            <button onclick="appendQuickDigit(8)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">8</button>
+                            <button onclick="appendQuickDigit(9)" class="font-mono font-bold text-sm text-white hover:bg-slate-900">9</button>
                         </div>
                     </div>
+
+                    <!-- Option C: Interactive SVG Dartboard View -->
+                    <div id="scorer-board-wrapper" class="hidden flex-1 flex flex-col items-center justify-between p-2 bg-slate-950">
+                        <div class="w-full flex-1 flex items-center justify-center overflow-hidden">
+                            <svg id="scorer-dartboard-svg" viewBox="-220 -220 440 440" class="max-h-full max-w-full aspect-square select-none drop-shadow-2xl"></svg>
+                        </div>
+                        <div class="w-full flex items-center justify-between px-3 py-2 border-t border-slate-800 shrink-0 text-xs">
+                            <button onclick="undoLastDart()" class="px-3 py-1.5 rounded-xl bg-slate-800 text-amber-400 font-bold"><i class="fa-solid fa-reply mr-1"></i> Undo</button>
+                            <span id="board-hover-indicator" class="font-mono text-emerald-400 font-semibold">Board antippen</span>
+                            <button onclick="setScorerInputView('pro')" class="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-bold">Zur Tastatur</button>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </section>
 
-        <!-- VIEW 2: HEATMAP (WITH DUAL PLAYER SPLIT SCREEN) -->
+        <!-- VIEW 2: HEATMAP (WITH DUAL PLAYER SPLIT SCREEN & GAME MODE FILTER) -->
         <section id="view-heatmap" class="tab-view hidden space-y-6">
             <div class="broadcast-card rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
@@ -431,6 +560,20 @@
                     <h2 class="text-xl sm:text-2xl font-extrabold text-white">Board Heatmap & Dualer Spieler-Vergleich</h2>
                 </div>
                 <div class="flex flex-wrap items-center gap-3">
+                    <!-- Spielmodus-Filter -->
+                    <div class="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
+                        <i class="fa-solid fa-filter text-emerald-400 text-xs"></i>
+                        <span class="text-[11px] font-bold uppercase text-slate-400">Modus:</span>
+                        <select id="analytics-mode-filter-hm" onchange="setAnalyticsGameModeFilter(this.value)" class="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer">
+                            <option value="ALL" class="bg-slate-900">Alle Spielmodi</option>
+                            <option value="501" class="bg-slate-900">Nur 501</option>
+                            <option value="301" class="bg-slate-900">Nur 301</option>
+                            <option value="701" class="bg-slate-900">Nur 701</option>
+                            <option value="Cricket" class="bg-slate-900">Nur Cricket</option>
+                            <option value="AroundTheClock" class="bg-slate-900">Around the Clock</option>
+                        </select>
+                    </div>
+                    <!-- Overlay-Umschalter -->
                     <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
                         <button onclick="setHeatmapOverlayMode('volume')" id="hm-btn-volume" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 transition">Treffer-Frequenz</button>
                         <button onclick="setHeatmapOverlayMode('doubles')" id="hm-btn-doubles" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition">Doppel-Effizienz</button>
@@ -445,14 +588,14 @@
                     <div class="w-full flex items-center justify-between mb-3">
                         <div>
                             <h3 id="hm-player-a-title" class="font-bold text-white text-base">Spieler A: Trefferbild</h3>
-                            <p class="text-xs text-slate-400">Thermische Sektor-Dichte</p>
+                            <p id="hm-player-a-subtitle" class="text-xs text-slate-400">Thermische Sektor-Dichte</p>
                         </div>
                         <span id="hm-player-a-tag" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold">Primär</span>
                     </div>
                     <div class="w-full max-w-[380px] aspect-square relative flex items-center justify-center my-2">
                         <svg id="heatmap-dartboard-svg-a" viewBox="-220 -220 440 440" class="w-full h-full select-none drop-shadow-2xl"></svg>
                     </div>
-                    <div id="hm-player-a-stats" class="w-full mt-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2 text-center text-xs font-mono"></div>
+                    <div id="hm-player-a-stats" class="w-full mt-4 pt-3 border-t border-slate-800 grid grid-cols-3 gap-2 text-center text-xs font-mono"></div>
                 </div>
 
                 <!-- Player B Heatmap Card -->
@@ -460,24 +603,38 @@
                     <div class="w-full flex items-center justify-between mb-3">
                         <div>
                             <h3 id="hm-player-b-title" class="font-bold text-white text-base">Spieler B: Trefferbild</h3>
-                            <p class="text-xs text-slate-400">Thermische Sektor-Dichte (Split-Screen)</p>
+                            <p id="hm-player-b-subtitle" class="text-xs text-slate-400">Thermische Sektor-Dichte (Split-Screen)</p>
                         </div>
                         <span id="hm-player-b-tag" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-mono font-bold">Vergleich</span>
                     </div>
                     <div class="w-full max-w-[380px] aspect-square relative flex items-center justify-center my-2">
                         <svg id="heatmap-dartboard-svg-b" viewBox="-220 -220 440 440" class="w-full h-full select-none drop-shadow-2xl"></svg>
                     </div>
-                    <div id="hm-player-b-stats" class="w-full mt-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2 text-center text-xs font-mono"></div>
+                    <div id="hm-player-b-stats" class="w-full mt-4 pt-3 border-t border-slate-800 grid grid-cols-3 gap-2 text-center text-xs font-mono"></div>
                 </div>
             </div>
         </section>
 
-        <!-- VIEW 3: CHECKOUT-ANALYSE (DUAL SPLIT-SCREEN COMPARISON) -->
+        <!-- VIEW 3: CHECKOUT-ANALYSE (DUAL SPLIT-SCREEN COMPARISON & GAME MODE FILTER) -->
         <section id="view-checkout" class="tab-view hidden space-y-6">
             <div class="broadcast-card rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-semibold">Finishing & Scoring Intelligence</span>
                     <h2 class="text-xl sm:text-2xl font-extrabold text-white">Checkout-Quoten & Dualer Formvergleich</h2>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="flex items-center gap-2 bg-slate-900 px-3.5 py-2 rounded-xl border border-slate-800">
+                        <i class="fa-solid fa-filter text-emerald-400 text-xs"></i>
+                        <span class="text-xs font-bold uppercase text-slate-400">Spielmodus filtern:</span>
+                        <select id="analytics-mode-filter-co" onchange="setAnalyticsGameModeFilter(this.value)" class="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer">
+                            <option value="ALL" class="bg-slate-900">Alle Spielmodi</option>
+                            <option value="501" class="bg-slate-900">Nur 501</option>
+                            <option value="301" class="bg-slate-900">Nur 301</option>
+                            <option value="701" class="bg-slate-900">Nur 701</option>
+                            <option value="Cricket" class="bg-slate-900">Nur Cricket</option>
+                            <option value="AroundTheClock" class="bg-slate-900">Around the Clock</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -486,47 +643,69 @@
                 <!-- Player A Metrics -->
                 <div class="broadcast-card rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h3 id="co-player-a-name" class="font-bold text-white text-lg">Spieler A</h3>
+                        <div>
+                            <h3 id="co-player-a-name" class="font-bold text-white text-lg">Spieler A</h3>
+                            <p id="co-player-a-mode-badge" class="text-[11px] font-mono text-emerald-400">Modus: Alle Spielmodi</p>
+                        </div>
                         <span class="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold">Primär</span>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-center">
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                    <div class="grid grid-cols-4 gap-2 text-center">
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                             <div class="text-[10px] uppercase text-slate-400">Checkout %</div>
-                            <div id="co-a-rate" class="font-mono font-extrabold text-base text-emerald-400">0.0%</div>
+                            <div id="co-a-rate" class="font-mono font-extrabold text-sm sm:text-base text-emerald-400">0.0%</div>
                         </div>
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                             <div class="text-[10px] uppercase text-slate-400">Average</div>
-                            <div id="co-a-avg" class="font-mono font-extrabold text-base text-white">0.00</div>
+                            <div id="co-a-avg" class="font-mono font-extrabold text-sm sm:text-base text-white">0.00</div>
                         </div>
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                             <div class="text-[10px] uppercase text-slate-400">First-9</div>
-                            <div id="co-a-f9" class="font-mono font-extrabold text-base text-amber-400">0.00</div>
+                            <div id="co-a-f9" class="font-mono font-extrabold text-sm sm:text-base text-amber-400">0.00</div>
+                        </div>
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                            <div class="text-[10px] uppercase text-slate-400">100+ / 180</div>
+                            <div id="co-a-tons" class="font-mono font-extrabold text-sm sm:text-base text-sky-400">0 / 0</div>
                         </div>
                     </div>
                     <div class="h-48 w-full"><canvas id="chart-checkout-trend-a"></canvas></div>
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Doppelfeld-Quoten (Top Versuche im Modus)</div>
+                        <div id="co-a-doubles-breakdown" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono"></div>
+                    </div>
                 </div>
 
                 <!-- Player B Metrics -->
                 <div class="broadcast-card rounded-2xl p-5 border-l-4 border-l-amber-500 space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-                        <h3 id="co-player-b-name" class="font-bold text-white text-lg">Spieler B</h3>
+                        <div>
+                            <h3 id="co-player-b-name" class="font-bold text-white text-lg">Spieler B</h3>
+                            <p id="co-player-b-mode-badge" class="text-[11px] font-mono text-amber-400">Modus: Alle Spielmodi</p>
+                        </div>
                         <span class="px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-mono font-bold">Vergleich</span>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-center">
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                    <div class="grid grid-cols-4 gap-2 text-center">
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                             <div class="text-[10px] uppercase text-slate-400">Checkout %</div>
-                            <div id="co-b-rate" class="font-mono font-extrabold text-base text-amber-400">0.0%</div>
+                            <div id="co-b-rate" class="font-mono font-extrabold text-sm sm:text-base text-amber-400">0.0%</div>
                         </div>
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                             <div class="text-[10px] uppercase text-slate-400">Average</div>
-                            <div id="co-b-avg" class="font-mono font-extrabold text-base text-white">0.00</div>
+                            <div id="co-b-avg" class="font-mono font-extrabold text-sm sm:text-base text-white">0.00</div>
                         </div>
-                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
                             <div class="text-[10px] uppercase text-slate-400">First-9</div>
-                            <div id="co-b-f9" class="font-mono font-extrabold text-base text-amber-400">0.00</div>
+                            <div id="co-b-f9" class="font-mono font-extrabold text-sm sm:text-base text-amber-400">0.00</div>
+                        </div>
+                        <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                            <div class="text-[10px] uppercase text-slate-400">100+ / 180</div>
+                            <div id="co-b-tons" class="font-mono font-extrabold text-sm sm:text-base text-sky-400">0 / 0</div>
                         </div>
                     </div>
                     <div class="h-48 w-full"><canvas id="chart-checkout-trend-b"></canvas></div>
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Doppelfeld-Quoten (Top Versuche im Modus)</div>
+                        <div id="co-b-doubles-breakdown" class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs font-mono"></div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -564,9 +743,26 @@
             </div>
 
             <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
-                <div class="xl:col-span-7 space-y-4">
-                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Deine gespeicherten Spielerprofile</h3>
-                    <div id="profiles-roster-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                <div class="xl:col-span-7 space-y-6">
+                    <div>
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 mb-3">Deine gespeicherten Spielerprofile</h3>
+                        <div id="profiles-roster-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                    </div>
+
+                    <div class="broadcast-card rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+                            <div>
+                                <span class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">Direkter Duell-Vergleich</span>
+                                <h3 class="font-extrabold text-white text-base flex items-center gap-2">
+                                    <i class="fa-solid fa-bolt-lightning text-amber-400"></i> Head-to-Head (H2H) Bilanz
+                                </h3>
+                            </div>
+                            <span id="h2h-versus-badge" class="px-3 py-1 rounded-xl bg-slate-900 border border-slate-700 font-mono text-xs text-slate-300">Spieler A vs. Spieler B</span>
+                        </div>
+                        <div id="h2h-stats-container" class="space-y-4">
+                            <!-- Dynamically populated via renderH2HComparison() -->
+                        </div>
+                    </div>
                 </div>
 
                 <div class="xl:col-span-5 space-y-6">
@@ -738,6 +934,7 @@
         let currentTab = 'scorer';
         let keypadMultiplier = 1;
         let heatmapOverlayMode = 'volume';
+        let analyticsGameModeFilter = 'ALL';
         let trendChartInstanceA = null;
         let trendChartInstanceB = null;
 
@@ -745,6 +942,203 @@
         let selectedStarterPlayerId = null;
         let isFullscreenMatchActive = false;
         let bullOffState = { players: [], currentIdx: 0, throws: {} };
+        let quickCustomBuffer = '';
+        let botThrowTimeout = null;
+        let wakeLockSentinel = null;
+
+        async function requestScreenWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLockSentinel = await navigator.wakeLock.request('screen');
+                } catch (err) {
+                    // Wake Lock optional fallback if battery saver is active
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (wakeLockSentinel !== null && document.visibilityState === 'visible') {
+                requestScreenWakeLock();
+            }
+        });
+
+        function triggerTouchHaptic(ms = 12) {
+            if (navigator.vibrate) {
+                try { navigator.vibrate(ms); } catch (e) {}
+            }
+        }
+
+        function toggleBotSetupPanel() {
+            const enabled = document.getElementById('setup-bot-enabled')?.checked;
+            const panel = document.getElementById('setup-bot-config');
+            if (panel) panel.classList.toggle('hidden', !enabled);
+            syncStarterSelectionPills();
+        }
+
+        function updateBotSlidersUI() {
+            const avg = document.getElementById('setup-bot-avg')?.value || 65;
+            const co = document.getElementById('setup-bot-co')?.value || 30;
+            const avgLbl = document.getElementById('bot-avg-label');
+            const coLbl = document.getElementById('bot-co-label');
+            if (avgLbl) avgLbl.textContent = `${avg}.0 Avg`;
+            if (coLbl) coLbl.textContent = `${co}%`;
+            syncStarterSelectionPills();
+        }
+
+        function setScorerInputView(mode) {
+            const proWrap = document.getElementById('scorer-keypad-wrapper');
+            const quickWrap = document.getElementById('scorer-quick-wrapper');
+            const boardWrap = document.getElementById('scorer-board-wrapper');
+
+            const btnPro = document.getElementById('input-mode-btn-pro');
+            const btnQuick = document.getElementById('input-mode-btn-quick');
+            const btnBoard = document.getElementById('input-mode-btn-board');
+
+            if (proWrap) proWrap.classList.toggle('hidden', mode !== 'pro');
+            if (quickWrap) quickWrap.classList.toggle('hidden', mode !== 'quick');
+            if (boardWrap) boardWrap.classList.toggle('hidden', mode !== 'board');
+
+            const activeCls = 'px-2.5 h-9 rounded-full bg-emerald-500 text-slate-950 font-bold text-[11px] flex items-center gap-1 transition shadow';
+            const idleCls = 'px-2.5 h-9 rounded-full text-slate-400 hover:text-white font-bold text-[11px] flex items-center gap-1 transition';
+
+            if (btnPro) btnPro.className = mode === 'pro' ? activeCls : idleCls;
+            if (btnQuick) btnQuick.className = mode === 'quick' ? activeCls : idleCls;
+            if (btnBoard) btnBoard.className = mode === 'board' ? activeCls : idleCls;
+        }
+
+        function toggleCompactBoardOverlay() {
+            const boardWrap = document.getElementById('scorer-board-wrapper');
+            if (boardWrap && boardWrap.classList.contains('hidden')) {
+                setScorerInputView('board');
+            } else {
+                setScorerInputView('pro');
+            }
+        }
+
+        function appendQuickDigit(digit) {
+            if (digit === 'clear') {
+                quickCustomBuffer = '';
+            } else if (quickCustomBuffer.length < 3) {
+                quickCustomBuffer += String(digit);
+            }
+            const bufEl = document.getElementById('quick-custom-buffer');
+            if (bufEl) bufEl.textContent = quickCustomBuffer || '0';
+        }
+
+        function submitCustomQuickBuffer() {
+            const val = parseInt(quickCustomBuffer || '0', 10);
+            quickCustomBuffer = '';
+            const bufEl = document.getElementById('quick-custom-buffer');
+            if (bufEl) bufEl.textContent = '0';
+            submitQuickTurnScore(val);
+        }
+
+        function submitQuickTurnScore(turnTotal, forceBust = false) {
+            if (!liveMatch) {
+                startNewMatch();
+                if (!liveMatch) return;
+            }
+            const activePlayer = liveMatch.players[liveMatch.currentPlayerIdx];
+            if (activePlayer.isBot) return;
+
+            if (turnTotal > 180 || turnTotal < 0) {
+                showToast('Ungültige Aufnahme (Maximal 180 Punkte)!', 'rose');
+                return;
+            }
+
+            // If user already entered partial darts in this turn, clear them first or warn
+            if (liveMatch.turnDarts.length > 0) {
+                showToast('Bitte erst aktuelle Aufnahme abschließen oder Undo drücken.', 'amber');
+                return;
+            }
+
+            // Snapshot for Undo
+            liveMatch.historyStack.push(JSON.parse(JSON.stringify({
+                currentPlayerIdx: liveMatch.currentPlayerIdx,
+                turnDarts: liveMatch.turnDarts,
+                turnStartScore: liveMatch.turnStartScore,
+                players: liveMatch.players,
+                legThrows: liveMatch.legThrows,
+                throwCountBefore: appDB.throws.length
+            })));
+
+            const scoreBefore = activePlayer.score;
+            const remAfter = scoreBefore - turnTotal;
+            let isBust = forceBust || remAfter < 0 || (liveMatch.outMode === 'DO' && remAfter === 1);
+            let isLegWon = !isBust && remAfter === 0;
+
+            // Approximate 3 darts for statistics
+            activePlayer.dartsThrown += 3;
+            activePlayer.legDartsThrown = (activePlayer.legDartsThrown || 0) + 3;
+
+            if (scoreBefore <= 50 || (scoreBefore <= 170 && isLegWon)) {
+                activePlayer.doubleAttempts++;
+                if (isLegWon) activePlayer.doubleHits++;
+            }
+
+            if (isBust) {
+                activePlayer.score = liveMatch.turnStartScore;
+                liveMatch.turnDarts = [
+                    { label: 'BUST', points: 0 },
+                    { label: '-', points: 0 },
+                    { label: '-', points: 0 }
+                ];
+            } else {
+                activePlayer.score = remAfter;
+                activePlayer.pointsScored += turnTotal;
+                liveMatch.turnDarts = [
+                    { label: `∑ ${turnTotal}`, points: turnTotal },
+                    { label: '-', points: 0 },
+                    { label: '-', points: 0 }
+                ];
+            }
+
+            // Store synthetic throws so overall match averages stay accurate
+            const perDartPts = isBust ? 0 : +(turnTotal / 3).toFixed(2);
+            for (let i = 0; i < 3; i++) {
+                const coords = computeCoordinatesForThrow(20, 1, 14);
+                appDB.throws.push({
+                    id: 'th_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 5),
+                    playerId: activePlayer.id,
+                    matchId: liveMatch.id,
+                    mode: liveMatch.mode,
+                    sector: 20,
+                    multiplier: turnTotal >= 140 && i < 2 ? 3 : 1,
+                    points: perDartPts,
+                    isBust,
+                    isFirst9: activePlayer.legDartsThrown <= 9,
+                    isDoubleAttempt: i === 2 && (scoreBefore <= 50 || isLegWon),
+                    isCheckoutHit: i === 2 && isLegWon,
+                    x: coords.x,
+                    y: coords.y,
+                    timestamp: Date.now()
+                });
+            }
+
+            saveDatabase();
+            checkEndOfTurn(isBust, isLegWon);
+        }
+
+        function setAnalyticsGameModeFilter(mode) {
+            analyticsGameModeFilter = mode || 'ALL';
+            const selHm = document.getElementById('analytics-mode-filter-hm');
+            const selCo = document.getElementById('analytics-mode-filter-co');
+            if (selHm && selHm.value !== analyticsGameModeFilter) selHm.value = analyticsGameModeFilter;
+            if (selCo && selCo.value !== analyticsGameModeFilter) selCo.value = analyticsGameModeFilter;
+            renderActiveViews();
+        }
+
+        function getModeDisplayName(mode) {
+            const map = {
+                'ALL': 'Alle Spielmodi',
+                '501': '501 Double Out',
+                '301': '301 Schnellspiel',
+                '701': '701 Marathon',
+                'Cricket': 'Standard Cricket',
+                'AroundTheClock': 'Around the Clock'
+            };
+            return map[mode] || mode;
+        }
 
         function getSectorAngleRad(sector) {
             if (sector === 25) return 0;
@@ -841,6 +1235,12 @@
                 activeNav.classList.remove('text-slate-300');
             }
 
+            // Auto-close mobile navigation menu when an item is selected
+            const sidebarNav = document.getElementById('sidebar-nav');
+            if (sidebarNav && window.innerWidth < 1024) {
+                sidebarNav.classList.add('hidden');
+            }
+
             renderActiveViews();
         }
 
@@ -875,6 +1275,12 @@
 
         function handleGlobalPlayerChange(playerId) {
             appDB.activePlayerId = playerId;
+            saveDatabase();
+            renderActiveViews();
+        }
+
+        function handleGlobalPlayerChangeB(playerId) {
+            appDB.activePlayerIdB = playerId;
             saveDatabase();
             renderActiveViews();
         }
@@ -977,7 +1383,26 @@
 
         function getSelectedSetupPlayers() {
             const checkedIds = Array.from(document.querySelectorAll('input[name="setup-player-cb"]:checked')).map(cb => cb.value);
-            return checkedIds.map(pid => appDB.players.find(p => p.id === pid)).filter(Boolean);
+            const humanPlayers = checkedIds.map(pid => appDB.players.find(p => p.id === pid)).filter(Boolean);
+            const botEnabled = document.getElementById('setup-bot-enabled')?.checked;
+            if (botEnabled) {
+                const botAvg = parseInt(document.getElementById('setup-bot-avg')?.value || '65', 10);
+                const botCo = parseInt(document.getElementById('setup-bot-co')?.value || '30', 10);
+                const firstHuman = humanPlayers[0] ? [humanPlayers[0]] : [];
+                return [
+                    ...firstHuman,
+                    {
+                        id: 'bot_ai',
+                        name: `Dartbot (${botAvg})`,
+                        nickname: `${botCo}% CO`,
+                        favDouble: 'D20',
+                        isBot: true,
+                        botAvg,
+                        botCo
+                    }
+                ];
+            }
+            return humanPlayers;
         }
 
         function syncStarterSelectionPills() {
@@ -1104,35 +1529,76 @@
         function setFullscreenMatchArenaMode(enable) {
             isFullscreenMatchActive = enable;
             const sidebar = document.querySelector('aside');
+            const mainEl = document.querySelector('main');
             const topCard = document.querySelector('#view-scorer > .broadcast-card:first-of-type');
-            const fsTopbar = document.getElementById('fullscreen-match-topbar');
+            const arenaEl = document.getElementById('live-match-arena');
 
             if (enable) {
+                requestScreenWakeLock();
                 if (sidebar) sidebar.classList.add('hidden');
                 if (topCard) topCard.classList.add('hidden');
-                if (fsTopbar) fsTopbar.classList.remove('hidden');
-                const title = document.getElementById('fs-match-title');
-                if (title && liveMatch) title.textContent = `${liveMatch.mode} Match • ${liveMatch.players.map(p => p.name).join(' vs. ')}`;
+                if (mainEl) {
+                    mainEl.classList.remove('p-4', 'sm:p-6', 'lg:p-8', 'space-y-6');
+                    mainEl.classList.add('p-0', 'sm:p-2');
+                }
+                if (arenaEl) {
+                    arenaEl.classList.remove('rounded-3xl', 'h-[calc(100dvh-1.5rem)]');
+                    arenaEl.classList.add('rounded-none', 'sm:rounded-3xl', 'h-[100dvh]', 'sm:h-[calc(100dvh-1rem)]');
+                }
             } else {
                 if (sidebar) sidebar.classList.remove('hidden');
                 if (topCard) topCard.classList.remove('hidden');
-                if (fsTopbar) fsTopbar.classList.add('hidden');
+                if (mainEl) {
+                    mainEl.classList.add('p-4', 'sm:p-6', 'lg:p-8', 'space-y-6');
+                    mainEl.classList.remove('p-0', 'sm:p-2');
+                }
+                if (arenaEl) {
+                    arenaEl.classList.add('rounded-3xl', 'h-[calc(100dvh-1.5rem)]');
+                    arenaEl.classList.remove('rounded-none', 'sm:rounded-3xl', 'h-[100dvh]', 'sm:h-[calc(100dvh-1rem)]');
+                }
             }
         }
 
         function exitFullscreenMatchToMenu() {
+            if (botThrowTimeout) {
+                clearTimeout(botThrowTimeout);
+                botThrowTimeout = null;
+            }
             setFullscreenMatchArenaMode(false);
             document.getElementById('match-setup-panel')?.classList.remove('hidden');
-            showToast('Match-Modus beendet.', 'amber');
+            showToast('Match-Setup geöffnet.', 'amber');
+        }
+
+        function advanceTurnManuallyOrConfirm() {
+            if (!liveMatch) return;
+            if (liveMatch.turnDarts.length > 0) {
+                const player = liveMatch.players[liveMatch.currentPlayerIdx];
+                player.lastTurnScore = liveMatch.turnDarts.reduce((acc, d) => acc + d.points, 0);
+                liveMatch.currentPlayerIdx = (liveMatch.currentPlayerIdx + 1) % liveMatch.players.length;
+                liveMatch.turnDarts = [];
+                liveMatch.turnStartScore = liveMatch.players[liveMatch.currentPlayerIdx].score;
+                renderLiveScorerUI();
+            }
         }
 
         function toggleMatchSetupModal() { document.getElementById('match-setup-panel')?.classList.toggle('hidden'); }
-        function handleGameModeSetupChange() {}
+        function handleGameModeSetupChange() {
+            const mode = document.getElementById('setup-gamemode')?.value;
+            const x01Opts = document.getElementById('setup-x01-options');
+            if (x01Opts) {
+                x01Opts.style.opacity = isX01Mode(mode) ? '1' : '0.4';
+                x01Opts.style.pointerEvents = isX01Mode(mode) ? 'auto' : 'none';
+            }
+        }
 
         function startNewMatch(enterFullscreen = false) {
+            if (botThrowTimeout) {
+                clearTimeout(botThrowTimeout);
+                botThrowTimeout = null;
+            }
             const checkedPlayers = getSelectedSetupPlayers();
             if (checkedPlayers.length === 0) {
-                showToast('Bitte erstelle und wähle Spieler aus!', 'rose');
+                showToast('Bitte erstelle und wähle zuerst Spielerprofile aus!', 'rose');
                 switchTab('profiles');
                 return;
             }
@@ -1147,50 +1613,73 @@
                 orderedPlayers = [orderedPlayers.find(p => p.id === selectedStarterPlayerId), ...orderedPlayers.filter(p => p.id !== selectedStarterPlayerId)];
             }
 
-            const startScore = (mode === '501' || mode === '301' || mode === '701') ? parseInt(mode, 10) : 0;
+            // Automatically sync the first two human match players to the global Dual-Analytics dropdowns
+            const humanParticipants = orderedPlayers.filter(p => !p.isBot);
+            if (humanParticipants.length >= 1) appDB.activePlayerId = humanParticipants[0].id;
+            if (humanParticipants.length >= 2) appDB.activePlayerIdB = humanParticipants[1].id;
+            saveDatabase();
+            populateGlobalPlayerSelects();
+
+            const startScore = isX01Mode(mode) ? parseInt(mode, 10) : (mode === 'AroundTheClock' ? 1 : 0);
 
             liveMatch = {
                 id: 'm_live_' + Date.now(),
                 mode, inMode, outMode, targetLegs,
                 currentPlayerIdx: 0,
+                legStarterIdx: 0,
                 turnDarts: [],
                 turnStartScore: startScore,
                 historyStack: [],
                 legThrows: [],
                 players: orderedPlayers.map(profile => ({
-                    id: profile.id, name: profile.name, nickname: profile.nickname || '', favDouble: profile.favDouble || 'D16',
-                    score: startScore, legsWon: 0, dartsThrown: 0, pointsScored: 0,
-                    doubleAttempts: 0, doubleHits: 0, lastTurnScore: '-'
+                    id: profile.id,
+                    name: profile.name,
+                    nickname: profile.nickname || '',
+                    favDouble: profile.favDouble || 'D16',
+                    isBot: !!profile.isBot,
+                    botAvg: profile.botAvg || 65,
+                    botCo: profile.botCo || 30,
+                    score: startScore,
+                    legsWon: 0,
+                    dartsThrown: 0,
+                    legDartsThrown: 0,
+                    pointsScored: 0,
+                    doubleAttempts: 0,
+                    doubleHits: 0,
+                    tons100: 0,
+                    tons140: 0,
+                    tons180: 0,
+                    highestFinish: 0,
+                    hasCheckedIn: inMode === 'SI',
+                    cricketMarks: { 20: 0, 19: 0, 18: 0, 17: 0, 16: 0, 15: 0, 25: 0 },
+                    clockTarget: 1,
+                    lastTurnScore: '-'
                 }))
             };
 
             liveMatch.turnStartScore = liveMatch.players[0].score;
             if (enterFullscreen) setFullscreenMatchArenaMode(true);
             renderLiveScorerUI();
-            showToast(`Game On! (${mode})`, 'emerald');
-        }
-
-        function setScorerInputView(viewMode) {
-            const boardWrap = document.getElementById('scorer-board-wrapper');
-            const keyWrap = document.getElementById('scorer-keypad-wrapper');
-            ['both', 'board', 'keypad'].forEach(m => {
-                const btn = document.getElementById(`input-mode-${m}`);
-                if (btn) btn.className = (m === viewMode) ? 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950' : 'px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white';
-            });
-            if (viewMode === 'both') { boardWrap.classList.remove('hidden'); keyWrap.classList.remove('hidden'); }
-            else if (viewMode === 'board') { boardWrap.classList.remove('hidden'); keyWrap.classList.add('hidden'); }
-            else { boardWrap.classList.add('hidden'); keyWrap.classList.remove('hidden'); }
+            showToast(`Game On! (${getModeDisplayName(mode)})`, 'emerald');
+            scheduleBotTurnIfNeeded();
         }
 
         function setKeypadMultiplier(mult) {
             keypadMultiplier = mult;
             [1, 2, 3].forEach(m => {
                 const btn = document.getElementById(`mult-btn-${m}`);
-                if (btn) btn.className = (m === mult) ? 'py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-emerald-500 text-slate-950 shadow' : 'py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700';
+                if (!btn) return;
+                if (m === mult) {
+                    const activeColor = m === 1 ? 'text-emerald-400 border-emerald-400' : (m === 2 ? 'text-rose-400 border-rose-400' : 'text-amber-400 border-amber-400');
+                    btn.className = `py-2.5 text-xs font-bold uppercase tracking-wider border-b-2 bg-slate-900/90 transition ${activeColor}`;
+                } else {
+                    btn.className = 'py-2.5 text-xs font-bold uppercase tracking-wider text-slate-400 hover:text-white border-b-2 border-transparent transition';
+                }
             });
         }
 
         function handleKeypadNumber(sector) {
+            triggerTouchHaptic(10);
             const mult = keypadMultiplier;
             const prefix = mult === 3 ? 'T' : (mult === 2 ? 'D' : 'S');
             const coords = computeCoordinatesForThrow(sector, mult, 5);
@@ -1200,27 +1689,106 @@
 
         function isX01Mode(mode) { return mode === '501' || mode === '301' || mode === '701'; }
 
+        // Dynamic Checkout Route Solver considering Remaining Score AND Darts Left in Current Turn (1, 2, or 3)
+        function getDynamicCheckoutRoute(remScore, dartsLeft, outMode = 'DO', favDouble = 'D16') {
+            if (remScore < 2 || remScore > 170) return null;
+            const bogeyNumbers = [169, 168, 166, 165, 163, 162, 159];
+            if (outMode === 'DO' && bogeyNumbers.includes(remScore)) return null;
+
+            const doubles = [];
+            for (let i = 20; i >= 1; i--) doubles.push({ label: `D${i}`, val: i * 2 });
+            doubles.push({ label: 'BULL', val: 50 });
+            // Prioritize player's favorite double and standard pro doubles (D20, D16, D18, D12, D10, D8)
+            const proPriority = [favDouble, 'D20', 'D16', 'D18', 'D12', 'D10', 'D8', 'BULL'];
+            doubles.sort((a, b) => {
+                const idxA = proPriority.indexOf(a.label);
+                const idxB = proPriority.indexOf(b.label);
+                if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                if (idxA !== -1) return -1;
+                if (idxB !== -1) return 1;
+                return b.val - a.val;
+            });
+
+            // 1. Check if finishable in 1 Dart
+            for (const d of doubles) {
+                if (d.val === remScore) return [d.label];
+            }
+            if (dartsLeft === 1) return null;
+
+            // Build all valid single/triple/double first-dart scoring beds
+            const allBeds = [
+                { label: 'T20', val: 60 }, { label: 'T19', val: 57 }, { label: 'T18', val: 54 }, { label: 'T17', val: 51 },
+                { label: 'BULL', val: 50 }, { label: 'T16', val: 48 }, { label: 'T15', val: 45 }, { label: 'T14', val: 42 },
+                { label: 'T13', val: 39 }, { label: 'T12', val: 36 }, { label: 'T11', val: 33 }, { label: 'T10', val: 30 },
+                { label: '25', val: 25 }
+            ];
+            for (let i = 20; i >= 1; i--) allBeds.push({ label: `S${i}`, val: i });
+            for (let i = 9; i >= 1; i--) allBeds.push({ label: `T${i}`, val: i * 3 });
+
+            // 2. If 2 Darts left (or 2-dart finish available), check PDC table first if it fits within dartsLeft
+            if (PDC_CHECKOUTS[remScore] && PDC_CHECKOUTS[remScore].length <= dartsLeft) {
+                return PDC_CHECKOUTS[remScore];
+            }
+
+            // Search best 2-dart combination (Bed + Double)
+            for (const d of doubles) {
+                const needed = remScore - d.val;
+                if (needed > 0) {
+                    const firstBed = allBeds.find(b => b.val === needed);
+                    if (firstBed) return [firstBed.label, d.label];
+                }
+            }
+            if (dartsLeft === 2) return null;
+
+            // 3. If 3 Darts left, check PDC table or 3-dart combination
+            if (PDC_CHECKOUTS[remScore]) return PDC_CHECKOUTS[remScore];
+
+            for (const b1 of allBeds) {
+                for (const d of doubles) {
+                    const needed2 = remScore - b1.val - d.val;
+                    if (needed2 > 0) {
+                        const b2 = allBeds.find(b => b.val === needed2);
+                        if (b2) return [b1.label, b2.label, d.label];
+                    }
+                }
+            }
+            return null;
+        }
+
         function recordDartThrow(sector, multiplier, label, x, y) {
             if (!liveMatch) {
                 startNewMatch();
                 if (!liveMatch) return;
             }
 
+            // Save state snapshot for reliable Undo
             liveMatch.historyStack.push(JSON.parse(JSON.stringify({
                 currentPlayerIdx: liveMatch.currentPlayerIdx,
                 turnDarts: liveMatch.turnDarts,
                 turnStartScore: liveMatch.turnStartScore,
                 players: liveMatch.players,
-                legThrows: liveMatch.legThrows
+                legThrows: liveMatch.legThrows,
+                throwCountBefore: appDB.throws.length
             })));
 
             const player = liveMatch.players[liveMatch.currentPlayerIdx];
-            const points = sector * multiplier;
+            let points = sector * multiplier;
             let isBust = false, isLegWon = false, isDoubleAttempt = false;
 
             if (isX01Mode(liveMatch.mode)) {
                 const scoreBefore = player.score;
-                if ((scoreBefore <= 40 && scoreBefore % 2 === 0 && scoreBefore >= 2) || scoreBefore === 50) {
+
+                // Double-In Check
+                if (!player.hasCheckedIn && liveMatch.inMode === 'DI') {
+                    if (multiplier === 2) {
+                        player.hasCheckedIn = true;
+                    } else {
+                        points = 0;
+                    }
+                }
+
+                // Detect Double Attempt
+                if (player.hasCheckedIn && ((scoreBefore <= 40 && scoreBefore % 2 === 0 && scoreBefore >= 2) || scoreBefore === 50)) {
                     isDoubleAttempt = true;
                     player.doubleAttempts++;
                 }
@@ -1229,24 +1797,93 @@
                 if (newScore < 0 || (liveMatch.outMode === 'DO' && newScore === 1)) {
                     isBust = true;
                 } else if (newScore === 0) {
-                    if (liveMatch.outMode === 'DO' && multiplier !== 2) isBust = true;
-                    else { isLegWon = true; player.score = 0; if (isDoubleAttempt) player.doubleHits++; }
+                    if (liveMatch.outMode === 'DO' && multiplier !== 2) {
+                        isBust = true;
+                    } else if (liveMatch.outMode === 'MO' && multiplier !== 2 && multiplier !== 3) {
+                        isBust = true;
+                    } else {
+                        isLegWon = true;
+                        player.score = 0;
+                        if (isDoubleAttempt) player.doubleHits++;
+                    }
                 } else {
                     player.score = newScore;
                 }
 
                 player.dartsThrown++;
-                if (!isBust) player.pointsScored += points;
-                else player.score = liveMatch.turnStartScore;
+                player.legDartsThrown = (player.legDartsThrown || 0) + 1;
+                const dartIndexInLeg = player.legDartsThrown;
+
+                if (!isBust) {
+                    player.pointsScored += points;
+                } else {
+                    const pointsAddedThisTurn = liveMatch.turnDarts.reduce((acc, d) => acc + d.points, 0);
+                    player.pointsScored = Math.max(0, player.pointsScored - pointsAddedThisTurn);
+                    player.score = liveMatch.turnStartScore;
+                }
+
+                appDB.throws.push({
+                    id: 'th_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    playerId: player.id,
+                    matchId: liveMatch.id,
+                    mode: liveMatch.mode,
+                    sector,
+                    multiplier,
+                    points: isBust ? 0 : points,
+                    isBust,
+                    isFirst9: dartIndexInLeg <= 9,
+                    isDoubleAttempt,
+                    isCheckoutHit: isLegWon,
+                    x, y,
+                    timestamp: Date.now()
+                });
+            } else if (liveMatch.mode === 'Cricket') {
+                player.dartsThrown++;
+                player.legDartsThrown = (player.legDartsThrown || 0) + 1;
+                let cricketPoints = 0;
+                if (CRICKET_NUMBERS.includes(sector)) {
+                    const currentMarks = player.cricketMarks[sector] || 0;
+                    const newMarks = currentMarks + multiplier;
+                    player.cricketMarks[sector] = Math.min(3, newMarks);
+                    const overflow = Math.max(0, newMarks - Math.max(currentMarks, 3));
+                    const opponentOpen = liveMatch.players.some((op, idx) => idx !== liveMatch.currentPlayerIdx && (op.cricketMarks[sector] || 0) < 3);
+                    if (overflow > 0 && opponentOpen) {
+                        cricketPoints = overflow * sector;
+                        player.score += cricketPoints;
+                        player.pointsScored += cricketPoints;
+                    }
+                }
+                points = cricketPoints;
+                const allClosed = CRICKET_NUMBERS.every(n => (player.cricketMarks[n] || 0) >= 3);
+                const highestScore = liveMatch.players.every(op => player.score >= op.score);
+                if (allClosed && highestScore) isLegWon = true;
 
                 appDB.throws.push({
                     id: 'th_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
                     playerId: player.id, matchId: liveMatch.id, mode: liveMatch.mode,
-                    sector, multiplier, points: isBust ? 0 : points, isDoubleAttempt, isCheckoutHit: isLegWon,
-                    x, y, timestamp: Date.now()
+                    sector, multiplier, points: sector * multiplier, isFirst9: player.legDartsThrown <= 9,
+                    isDoubleAttempt: false, isCheckoutHit: isLegWon, x, y, timestamp: Date.now()
                 });
-            } else {
+            } else if (liveMatch.mode === 'AroundTheClock') {
                 player.dartsThrown++;
+                player.legDartsThrown = (player.legDartsThrown || 0) + 1;
+                const target = player.score;
+                let hitTarget = false;
+                if (target <= 20 && sector === target && multiplier > 0) {
+                    player.score = target === 20 ? 25 : target + 1;
+                    hitTarget = true;
+                } else if (target === 25 && sector === 25 && multiplier > 0) {
+                    player.score = 0;
+                    hitTarget = true;
+                    isLegWon = true;
+                }
+                player.pointsScored += hitTarget ? sector * multiplier : 0;
+                appDB.throws.push({
+                    id: 'th_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    playerId: player.id, matchId: liveMatch.id, mode: liveMatch.mode,
+                    sector, multiplier, points: sector * multiplier, isFirst9: player.legDartsThrown <= 9,
+                    isDoubleAttempt: target === 25, isCheckoutHit: isLegWon, x, y, timestamp: Date.now()
+                });
             }
 
             liveMatch.turnDarts.push({ label: isBust ? `${label} (BUST)` : label, points: isBust ? 0 : points });
@@ -1255,12 +1892,43 @@
             checkEndOfTurn(isBust, isLegWon);
         }
 
+        function undoLastDart() {
+            if (!liveMatch || !liveMatch.historyStack || liveMatch.historyStack.length === 0) {
+                showToast('Kein Wurf zum Rückgängigmachen vorhanden.', 'amber');
+                return;
+            }
+            const prevState = liveMatch.historyStack.pop();
+            liveMatch.currentPlayerIdx = prevState.currentPlayerIdx;
+            liveMatch.turnDarts = prevState.turnDarts;
+            liveMatch.turnStartScore = prevState.turnStartScore;
+            liveMatch.players = prevState.players;
+            liveMatch.legThrows = prevState.legThrows;
+
+            if (typeof prevState.throwCountBefore === 'number') {
+                appDB.throws.length = prevState.throwCountBefore;
+            } else {
+                appDB.throws.pop();
+            }
+            saveDatabase();
+            renderLiveScorerUI();
+            showToast('Letzter Wurf rückgängig gemacht.', 'amber');
+        }
+
         function checkEndOfTurn(isBust, isLegWon) {
             const player = liveMatch.players[liveMatch.currentPlayerIdx];
             const turnSum = isBust ? 0 : liveMatch.turnDarts.reduce((acc, d) => acc + d.points, 0);
 
             if (isLegWon) {
+                if (turnSum === 180) player.tons180 = (player.tons180 || 0) + 1;
+                else if (turnSum >= 140) player.tons140 = (player.tons140 || 0) + 1;
+                else if (turnSum >= 100) player.tons100 = (player.tons100 || 0) + 1;
+
+                if (isX01Mode(liveMatch.mode) && liveMatch.turnStartScore > (player.highestFinish || 0)) {
+                    player.highestFinish = liveMatch.turnStartScore;
+                }
+
                 player.legsWon++;
+                player.lastTurnScore = turnSum;
                 showToast(`🎯 ${player.name} gewinnt das Leg!`, 'emerald');
                 if (player.legsWon >= liveMatch.targetLegs) {
                     finalizeCompletedMatch(player);
@@ -1271,6 +1939,11 @@
             }
 
             if (isBust || liveMatch.turnDarts.length >= 3) {
+                if (!isBust) {
+                    if (turnSum === 180) player.tons180 = (player.tons180 || 0) + 1;
+                    else if (turnSum >= 140) player.tons140 = (player.tons140 || 0) + 1;
+                    else if (turnSum >= 100) player.tons100 = (player.tons100 || 0) + 1;
+                }
                 player.lastTurnScore = isBust ? 'BUST' : turnSum;
                 setTimeout(() => {
                     if (!liveMatch) return;
@@ -1278,140 +1951,476 @@
                     liveMatch.turnDarts = [];
                     liveMatch.turnStartScore = liveMatch.players[liveMatch.currentPlayerIdx].score;
                     renderLiveScorerUI();
-                }, 250);
+                    scheduleBotTurnIfNeeded();
+                }, 240);
+            } else {
+                scheduleBotTurnIfNeeded();
             }
             renderLiveScorerUI();
         }
 
         function resetLegForNextRound() {
-            const startScore = isX01Mode(liveMatch.mode) ? parseInt(liveMatch.mode, 10) : 0;
-            liveMatch.players.forEach(p => { p.score = startScore; });
+            const startScore = isX01Mode(liveMatch.mode) ? parseInt(liveMatch.mode, 10) : (liveMatch.mode === 'AroundTheClock' ? 1 : 0);
+            liveMatch.players.forEach(p => {
+                p.score = startScore;
+                p.legDartsThrown = 0;
+                p.hasCheckedIn = liveMatch.inMode === 'SI';
+                p.cricketMarks = { 20: 0, 19: 0, 18: 0, 17: 0, 16: 0, 15: 0, 25: 0 };
+            });
             liveMatch.turnDarts = [];
             liveMatch.legThrows = [];
-            liveMatch.currentPlayerIdx = 0;
-            liveMatch.turnStartScore = liveMatch.players[0].score;
+            // Alternate leg starter & store legStarterIdx for the Throw-First marker
+            const totalLegsPlayed = liveMatch.players.reduce((sum, p) => sum + p.legsWon, 0);
+            liveMatch.legStarterIdx = totalLegsPlayed % liveMatch.players.length;
+            liveMatch.currentPlayerIdx = liveMatch.legStarterIdx;
+            liveMatch.turnStartScore = liveMatch.players[liveMatch.currentPlayerIdx].score;
             renderLiveScorerUI();
+            scheduleBotTurnIfNeeded();
         }
 
-        function finalizeCompletedMatch(winner) {
-            const snapshot = JSON.parse(JSON.stringify(liveMatch.players));
-            const mode = liveMatch.mode;
-            const statsObj = {};
-            liveMatch.players.forEach(p => {
-                const avg = p.dartsThrown > 0 ? +((p.pointsScored / p.dartsThrown) * 3).toFixed(1) : 0;
-                statsObj[p.id] = { avg, doubleAttempts: p.doubleAttempts, doubleHits: p.doubleHits };
-            });
+        function parseDartTargetCode(code) {
+            if (!code) return { sector: 20, mult: 1, label: 'S20' };
+            if (code === 'BULL') return { sector: 25, mult: 2, label: 'BULL' };
+            if (code === '25' || code === 'S25') return { sector: 25, mult: 1, label: 'S25' };
+            const prefix = code[0];
+            const num = parseInt(code.slice(1), 10) || 20;
+            const mult = prefix === 'T' ? 3 : (prefix === 'D' ? 2 : 1);
+            return { sector: num, mult, label: `${prefix}${num}` };
+        }
 
-            appDB.matches.push({
-                id: liveMatch.id, date: new Date().toISOString(), label: `Match #${appDB.matches.length + 1}`,
-                mode, players: liveMatch.players.map(p => p.id), winnerId: winner.id, stats: statsObj
-            });
+        function computeBotSingleDart(botPlayer) {
+            const target3DartAvg = botPlayer.botAvg || 65;
+            const targetPerDart = target3DartAvg / 3;
+            const checkoutProb = (botPlayer.botCo || 30) / 100;
+            const rem = botPlayer.score;
+            const dartsLeft = Math.max(1, 3 - liveMatch.turnDarts.length);
+
+            if (isX01Mode(liveMatch.mode)) {
+                // 1. Direct Double Attempt (Score is a 1-dart finish: 2..40 even or 50)
+                if ((rem <= 40 && rem >= 2 && rem % 2 === 0) || rem === 50) {
+                    const hitDouble = Math.random() < checkoutProb;
+                    if (hitDouble) {
+                        if (rem === 50) return { sector: 25, mult: 2, label: 'BULL' };
+                        const sec = rem / 2;
+                        return { sector: sec, mult: 2, label: `D${sec}` };
+                    } else {
+                        // Realistic miss on double: either outside (0 pts) or single bed (half points)
+                        if (rem === 2 || Math.random() < 0.58) {
+                            return { sector: 0, mult: 0, label: 'MISS' };
+                        } else {
+                            const sec = rem === 50 ? 25 : rem / 2;
+                            return { sector: sec, mult: 1, label: `S${sec}` };
+                        }
+                    }
+                }
+
+                // 2. Setup or multi-dart finish range (rem <= 170)
+                if (rem <= 170 && rem > 40) {
+                    const route = getDynamicCheckoutRoute(rem, dartsLeft, liveMatch.outMode, 'D20');
+                    if (route && route.length > 0) {
+                        const intended = parseDartTargetCode(route[0]);
+                        const skillFactor = Math.min(0.82, Math.max(0.22, (target3DartAvg - 25) / 100));
+                        if (Math.random() < skillFactor) {
+                            return intended;
+                        }
+                        // Slight miss into single of same sector
+                        return { sector: intended.sector, mult: 1, label: `S${intended.sector}` };
+                    }
+                }
+
+                // 3. Standard Power-Scoring (rem > 170 or bogey)
+                // Choose realistic dart based on targetPerDart
+                const r = Math.random();
+                const t20Prob = Math.max(0.05, Math.min(0.62, (targetPerDart - 12) / 38));
+                const s20Prob = 0.52;
+                if (r < t20Prob && rem > 80) {
+                    return { sector: 20, mult: 3, label: 'T20' };
+                } else if (r < t20Prob + s20Prob) {
+                    // Leave a good bogey-free score if close to finish
+                    if (rem <= 70 && rem > 40) {
+                        const leave32 = rem - 32;
+                        if (leave32 >= 1 && leave32 <= 20) return { sector: leave32, mult: 1, label: `S${leave32}` };
+                    }
+                    return { sector: 20, mult: 1, label: 'S20' };
+                } else if (r < t20Prob + s20Prob + 0.16) {
+                    return { sector: 19, mult: Math.random() < (t20Prob * 0.7) ? 3 : 1, label: Math.random() < (t20Prob * 0.7) ? 'T19' : 'S19' };
+                } else {
+                    // Stray dart into 5 or 1 (classic 20-neighbors)
+                    const neighbor = Math.random() < 0.5 ? 5 : 1;
+                    return { sector: neighbor, mult: 1, label: `S${neighbor}` };
+                }
+            }
+
+            // Fallback for Cricket / AroundTheClock
+            return { sector: 20, mult: 1, label: 'S20' };
+        }
+
+        function scheduleBotTurnIfNeeded() {
+            if (botThrowTimeout) {
+                clearTimeout(botThrowTimeout);
+                botThrowTimeout = null;
+            }
+            if (!liveMatch || !liveMatch.players || liveMatch.players.length === 0) return;
+            const activePlayer = liveMatch.players[liveMatch.currentPlayerIdx];
+            if (!activePlayer || !activePlayer.isBot) return;
+
+            botThrowTimeout = setTimeout(() => {
+                if (!liveMatch) return;
+                const cur = liveMatch.players[liveMatch.currentPlayerIdx];
+                if (!cur || !cur.isBot) return;
+                const dart = computeBotSingleDart(cur);
+                const coords = computeCoordinatesForThrow(dart.sector, dart.mult, 5);
+                recordDartThrow(dart.sector, dart.mult, dart.label, coords.x, coords.y);
+            }, 520);
+        }
+
+        function finalizeCompletedMatch(winnerPlayer) {
+            if (!liveMatch) return;
+            const matchRecord = {
+                id: liveMatch.id,
+                mode: liveMatch.mode,
+                targetLegs: liveMatch.targetLegs,
+                winnerId: winnerPlayer.id,
+                winnerName: winnerPlayer.name,
+                timestamp: Date.now(),
+                players: liveMatch.players.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    legsWon: p.legsWon,
+                    dartsThrown: p.dartsThrown,
+                    avg: p.dartsThrown > 0 ? +((p.pointsScored / p.dartsThrown) * 3).toFixed(2) : 0,
+                    doubleAttempts: p.doubleAttempts,
+                    doubleHits: p.doubleHits,
+                    highestFinish: p.highestFinish || 0
+                }))
+            };
+            appDB.matches.push(matchRecord);
             saveDatabase();
-
-            const modal = document.getElementById('post-match-modal');
-            if (modal) {
-                document.getElementById('pm-winner-headline').textContent = `Sieger: ${winner.name}`;
-                document.getElementById('pm-final-score-badge').textContent = snapshot.map(p => `${p.name} ${p.legsWon}`).join(' : ');
-                document.getElementById('pm-players-stats-grid').innerHTML = snapshot.map(p => `
-                    <div class="p-4 rounded-2xl bg-slate-900 border ${p.id === winner.id ? 'border-amber-500 glow-gold' : 'border-slate-800'} space-y-2">
-                        <div class="font-bold text-white text-base">${p.name} (${p.legsWon} Legs)</div>
-                        <div class="text-xs font-mono text-slate-300">Darts: ${p.dartsThrown} | Doppel %: ${p.doubleAttempts > 0 ? Math.round((p.doubleHits/p.doubleAttempts)*100) : 0}%</div>
-                    </div>
-                `).join('');
-                modal.classList.remove('hidden');
-            }
-            resetLegForNextRound();
-            liveMatch.players.forEach(p => p.legsWon = 0);
             renderLiveScorerUI();
+
+            // Populate Post-Match Modal
+            document.getElementById('pm-mode-subtitle').textContent = `Offizieller Match-Bericht • ${getModeDisplayName(liveMatch.mode)}`;
+            document.getElementById('pm-winner-headline').textContent = `🏆 ${winnerPlayer.name} gewinnt das Match!`;
+            document.getElementById('pm-final-score-badge').textContent = liveMatch.players.map(p => `${p.name} ${p.legsWon}`).join(' : ');
+
+            const statsGrid = document.getElementById('pm-players-stats-grid');
+            if (statsGrid) {
+                statsGrid.innerHTML = liveMatch.players.map((p, idx) => {
+                    const avg = p.dartsThrown > 0 ? ((p.pointsScored / p.dartsThrown) * 3).toFixed(2) : '0.00';
+                    const coRate = p.doubleAttempts > 0 ? ((p.doubleHits / p.doubleAttempts) * 100).toFixed(1) : '0.0';
+                    const isWinner = p.id === winnerPlayer.id;
+                    return `
+                        <div class="p-4 rounded-2xl bg-slate-900 border ${isWinner ? 'border-emerald-500/60' : 'border-slate-800'} space-y-3">
+                            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                                <span class="font-extrabold text-white text-base">${p.name}</span>
+                                <span class="px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold ${isWinner ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-300'}">${p.legsWon} Legs</span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-2 text-center font-mono text-xs">
+                                <div class="bg-slate-950 p-2 rounded-lg"><div class="text-[10px] text-slate-400">3-Dart Avg</div><div class="text-white font-bold text-sm">${avg}</div></div>
+                                <div class="bg-slate-950 p-2 rounded-lg"><div class="text-[10px] text-slate-400">Checkout</div><div class="text-emerald-400 font-bold text-sm">${coRate}% (${p.doubleHits}/${p.doubleAttempts})</div></div>
+                                <div class="bg-slate-950 p-2 rounded-lg"><div class="text-[10px] text-slate-400">High Finish</div><div class="text-amber-400 font-bold text-sm">${p.highestFinish || '-'}</div></div>
+                                <div class="bg-slate-950 p-2 rounded-lg"><div class="text-[10px] text-slate-400">Darts</div><div class="text-sky-400 font-bold text-sm">${p.dartsThrown}</div></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('post-match-modal')?.classList.remove('hidden');
         }
 
-        function closePostMatchToMainMenu() { document.getElementById('post-match-modal')?.classList.add('hidden'); setFullscreenMatchArenaMode(false); }
-        function closePostMatchAndGoToAnalytics() { document.getElementById('post-match-modal')?.classList.add('hidden'); setFullscreenMatchArenaMode(false); switchTab('checkout'); }
-        function startRematchFromModal() { document.getElementById('post-match-modal')?.classList.add('hidden'); startNewMatch(true); }
-
-        function undoLastDart() {
-            if (!liveMatch || liveMatch.historyStack.length === 0) {
-                showToast('Kein Wurf zum Zurücksetzen.', 'amber');
-                return;
+        function closePostMatchAndGoToAnalytics() {
+            document.getElementById('post-match-modal')?.classList.add('hidden');
+            setFullscreenMatchArenaMode(false);
+            if (liveMatch && isX01Mode(liveMatch.mode)) {
+                setAnalyticsGameModeFilter(liveMatch.mode);
             }
-            const prev = liveMatch.historyStack.pop();
-            liveMatch.currentPlayerIdx = prev.currentPlayerIdx;
-            liveMatch.turnDarts = prev.turnDarts;
-            liveMatch.turnStartScore = prev.turnStartScore;
-            liveMatch.players = prev.players;
-            liveMatch.legThrows = prev.legThrows;
-            if (appDB.throws.length > 0) appDB.throws.pop();
-            renderLiveScorerUI();
-            showToast('Letzter Wurf zurückgesetzt.', 'amber');
+            switchTab('checkout');
+        }
+
+        function closePostMatchToMainMenu() {
+            document.getElementById('post-match-modal')?.classList.add('hidden');
+            setFullscreenMatchArenaMode(false);
+        }
+
+        function startRematchFromModal() {
+            document.getElementById('post-match-modal')?.classList.add('hidden');
+            startNewMatch(true);
         }
 
         function renderLiveScorerUI() {
             if (!liveMatch || liveMatch.players.length === 0) return;
             const activePlayer = liveMatch.players[liveMatch.currentPlayerIdx];
 
-            document.getElementById('live-mode-badge').textContent = `${liveMatch.mode} - FT ${liveMatch.targetLegs} LEGS`;
-            document.getElementById('live-turn-indicator').innerHTML = `Am Oche: <strong class="text-emerald-400">${activePlayer.name}</strong>`;
+            const modeBadge = document.getElementById('live-mode-badge');
+            if (modeBadge) modeBadge.textContent = `FIRST TO ${liveMatch.targetLegs} ${liveMatch.targetLegs === 1 ? 'LEG' : 'LEGS'}`;
+            const subModeLabel = document.getElementById('live-submode-label');
+            if (subModeLabel) subModeLabel.textContent = `${liveMatch.mode} • ${liveMatch.outMode === 'DO' ? 'DOUBLE OUT' : liveMatch.outMode}`;
 
+            const turnInd = document.getElementById('live-turn-indicator');
+            if (turnInd) {
+                const isFirstPlayer = liveMatch.currentPlayerIdx === 0;
+                turnInd.className = `font-mono font-extrabold text-xs sm:text-sm tracking-wide uppercase truncate ${isFirstPlayer ? 'text-emerald-400' : 'text-amber-400'}`;
+                turnInd.textContent = activePlayer.isBot
+                    ? `🤖 ${activePlayer.name.toUpperCase()} WIRFT...`
+                    : `${activePlayer.name.toUpperCase()}'S TURN TO THROW!`;
+            }
+
+            // Render 3 Dart Turn Slots
             const slotsEl = document.getElementById('current-turn-slots');
             if (slotsEl) {
                 slotsEl.innerHTML = [0, 1, 2].map(i => {
                     const d = liveMatch.turnDarts[i];
-                    return `<div class="w-12 sm:w-16 h-9 rounded-lg ${d ? 'bg-emerald-500/20 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-500'} border flex items-center justify-center font-mono font-bold text-xs">${d ? d.label : '-'}</div>`;
+                    return `<div class="h-9 flex items-center justify-center font-mono font-extrabold text-sm ${d ? 'text-white' : 'text-slate-500'}">${d ? d.label : ''}</div>`;
                 }).join('');
             }
-            document.getElementById('current-turn-sum').textContent = `= ${liveMatch.turnDarts.reduce((acc, d) => acc + d.points, 0)}`;
-
-            const pdcBanner = document.getElementById('pdc-checkout-banner');
-            const remScore = activePlayer.score;
-            if (isX01Mode(liveMatch.mode) && remScore <= 170 && remScore >= 2 && PDC_CHECKOUTS[remScore]) {
-                pdcBanner.classList.remove('hidden');
-                document.getElementById('pdc-route-subtext').textContent = `${remScore} Rest - Empfohlener Weg:`;
-                document.getElementById('pdc-route-pills').innerHTML = PDC_CHECKOUTS[remScore].map(s => `<span class="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 font-mono font-bold text-xs">${s}</span>`).join('');
-            } else {
-                pdcBanner.classList.add('hidden');
+            const turnSum = liveMatch.turnDarts.reduce((acc, d) => acc + d.points, 0);
+            const sumBtn = document.getElementById('current-turn-sum');
+            if (sumBtn) {
+                sumBtn.textContent = liveMatch.turnDarts.length > 0 ? `OK (${turnSum})` : `= 0`;
             }
 
-            document.getElementById('live-player-cards').innerHTML = liveMatch.players.map((p, idx) => {
-                const isTurn = idx === liveMatch.currentPlayerIdx;
-                const avg = p.dartsThrown > 0 ? ((p.pointsScored / p.dartsThrown) * 3).toFixed(1) : '0.0';
-                return `
-                    <div class="broadcast-card rounded-2xl p-4 sm:p-5 ${isTurn ? 'ring-2 ring-emerald-500 glow-emerald' : 'opacity-85'}">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-white text-base">${p.name}</span>
-                            <span class="px-3 py-1 rounded-lg bg-slate-900 border border-slate-700 font-mono text-xs font-bold text-emerald-400">Legs: ${p.legsWon}</span>
+            // Dynamic Checkout Route Updated After Every Single Dart!
+            const pdcBanner = document.getElementById('pdc-checkout-banner');
+            const remScore = activePlayer.score;
+            const dartsLeftInTurn = Math.max(1, 3 - liveMatch.turnDarts.length);
+            const dynamicRoute = isX01Mode(liveMatch.mode)
+                ? getDynamicCheckoutRoute(remScore, dartsLeftInTurn, liveMatch.outMode, activePlayer.favDouble || 'D16')
+                : null;
+
+            if (pdcBanner) {
+                if (dynamicRoute && dynamicRoute.length > 0) {
+                    pdcBanner.classList.remove('hidden');
+                    const subTxt = document.getElementById('pdc-route-subtext');
+                    if (subTxt) subTxt.textContent = `${remScore} (${dartsLeftInTurn}D):`;
+                    document.getElementById('pdc-route-pills').innerHTML = dynamicRoute.map(step =>
+                        `<span class="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-mono font-extrabold text-xs shadow">${step}</span>`
+                    ).join('<i class="fa-solid fa-arrow-right text-[9px] text-amber-400/80"></i>');
+                } else if (isX01Mode(liveMatch.mode) && remScore <= 170 && remScore >= 2 && PDC_CHECKOUTS[remScore]) {
+                    pdcBanner.classList.remove('hidden');
+                    const subTxt = document.getElementById('pdc-route-subtext');
+                    if (subTxt) subTxt.textContent = `${remScore} Rest:`;
+                    document.getElementById('pdc-route-pills').innerHTML = PDC_CHECKOUTS[remScore].slice(0, dartsLeftInTurn).map(step =>
+                        `<span class="px-2 py-0.5 rounded-md bg-slate-800 text-amber-300 border border-amber-500/40 font-mono font-bold text-xs">${step}</span>`
+                    ).join('');
+                } else {
+                    pdcBanner.classList.add('hidden');
+                }
+            }
+
+            // Render Split Player Scorecards with Leg-Starter (Anwurf) Indicator 🎯
+            const cardsContainer = document.getElementById('live-player-cards');
+            if (cardsContainer) {
+                cardsContainer.className = `grid ${liveMatch.players.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} mx-3 mt-1.5 rounded-2xl overflow-hidden shadow-xl border border-slate-800/80 shrink-0`;
+                cardsContainer.innerHTML = liveMatch.players.map((p, idx) => {
+                    const isTurn = idx === liveMatch.currentPlayerIdx;
+                    const isLegStarter = idx === (liveMatch.legStarterIdx || 0);
+                    const avg = p.dartsThrown > 0 ? ((p.pointsScored / p.dartsThrown) * 3).toFixed(2) : '0.00';
+                    const isLeftCard = idx % 2 === 0;
+                    const bgGradient = isLeftCard
+                        ? 'bg-gradient-to-b from-emerald-600/90 via-emerald-700/85 to-slate-900'
+                        : 'bg-gradient-to-b from-amber-500/90 via-amber-600/85 to-slate-900';
+                    const avatarBorder = isLeftCard ? 'border-emerald-300 bg-slate-950 text-emerald-400' : 'border-amber-200 bg-slate-950 text-amber-400';
+
+                    return `
+                        <div class="${bgGradient} p-3 sm:p-4 relative flex flex-col justify-between transition-all ${isTurn ? 'opacity-100 ring-2 ring-inset ring-white/40' : 'opacity-80'}">
+                            <!-- Top Row: Avatar + Player Name + Leg Starter (Anwurf) Badge -->
+                            <div class="flex items-center justify-between gap-1.5">
+                                <div class="flex items-center gap-2 min-w-0">
+                                    <div class="w-8 h-8 rounded-full border-2 ${avatarBorder} flex items-center justify-center font-mono font-extrabold text-xs shadow shrink-0">
+                                        ${p.isBot ? '<i class="fa-solid fa-robot"></i>' : p.name.slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <span class="font-bold text-white text-sm sm:text-base truncate">${p.name}</span>
+                                </div>
+                                ${isLegStarter ? `<span class="px-1.5 py-0.5 rounded-md bg-slate-950/90 border border-rose-400/60 text-[10px] font-mono font-extrabold text-rose-300 flex items-center gap-1 shrink-0 shadow" title="Anwurf in diesem Leg (Throw First)"><span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>🎯</span>` : ''}
+                            </div>
+
+                            <!-- Middle Row: Huge Remaining Score + Active Throw Dot + Legs Won Box -->
+                            <div class="my-2 sm:my-3 flex items-baseline justify-between">
+                                <div class="text-4xl sm:text-5xl font-mono font-extrabold text-white tracking-tight leading-none drop-shadow">
+                                    ${p.score}
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    ${isTurn ? '<span class="w-2.5 h-2.5 rounded-full bg-slate-950 animate-pulse shadow"></span>' : ''}
+                                    <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-950/90 border border-white/15 flex items-center justify-center font-mono font-extrabold text-white text-xs sm:text-sm shadow">
+                                        ${p.legsWon}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Stats Rows: 3-dart avg, Last score, Darts thrown -->
+                            <div class="space-y-0.5 text-[11px] sm:text-xs font-medium text-white/90 pt-1 border-t border-white/15">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-white/75">3-dart avg.</span>
+                                    <span class="font-mono font-extrabold text-white">${avg}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-white/75">Last score</span>
+                                    <span class="font-mono font-bold text-white">${p.lastTurnScore}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-white/75">Darts thrown</span>
+                                    <span class="font-mono font-bold text-white">${p.legDartsThrown || 0}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="my-3 py-3 px-4 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-baseline">
-                            <span class="text-xs uppercase font-mono text-slate-400">Rest</span>
-                            <span class="text-4xl font-mono font-extrabold ${isTurn ? 'text-white' : 'text-slate-300'}">${p.score}</span>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono">
-                            <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Avg</div><div class="font-bold text-white">${avg}</div></div>
-                            <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Doppel %</div><div class="font-bold text-emerald-400">${p.doubleAttempts > 0 ? Math.round((p.doubleHits / p.doubleAttempts) * 100) : 0}%</div></div>
-                            <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Letzte</div><div class="font-bold text-slate-200">${p.lastTurnScore}</div></div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            }
         }
 
-        function setHeatmapOverlayMode(mode) { heatmapOverlayMode = mode; renderDualHeatmapView(); }
+        function computePlayerAnalytics(playerId, modeFilter = analyticsGameModeFilter) {
+            const allPlayerThrows = appDB.throws.filter(t => t.playerId === playerId);
+            const pThrows = modeFilter === 'ALL'
+                ? allPlayerThrows
+                : allPlayerThrows.filter(t => t.mode === modeFilter);
+
+            const scoringThrows = (modeFilter === 'ALL')
+                ? pThrows.filter(t => isX01Mode(t.mode))
+                : pThrows;
+
+            const activeThrows = scoringThrows.length > 0 ? scoringThrows : pThrows;
+            const totalDarts = activeThrows.length;
+            const totalPoints = activeThrows.reduce((acc, t) => acc + (t.points || 0), 0);
+            const overallAvg = totalDarts > 0 ? ((totalPoints / totalDarts) * 3) : 0;
+
+            const first9Throws = activeThrows.filter(t => t.isFirst9);
+            const first9Points = first9Throws.reduce((acc, t) => acc + (t.points || 0), 0);
+            const first9Avg = first9Throws.length > 0 ? ((first9Points / first9Throws.length) * 3) : overallAvg;
+
+            const doubleAttThrows = pThrows.filter(t => t.isDoubleAttempt);
+            const doubleHitThrows = pThrows.filter(t => t.isCheckoutHit);
+            const doubleAtt = doubleAttThrows.length;
+            const doubleHit = doubleHitThrows.length;
+            const checkoutRate = doubleAtt > 0 ? ((doubleHit / doubleAtt) * 100) : 0;
+
+            // Count high-scoring visits / Triple hits in filtered throws
+            const tripleHits = pThrows.filter(t => t.multiplier === 3).length;
+            const bullHits = pThrows.filter(t => t.sector === 25).length;
+
+            // Sector frequency map & Double breakdown
+            const sectorCounts = {};
+            BOARD_ORDER.forEach(s => { sectorCounts[s] = 0; });
+            sectorCounts[25] = 0;
+            const doubleBreakdown = {};
+
+            pThrows.forEach(t => {
+                if (t.sector > 0) {
+                    sectorCounts[t.sector] = (sectorCounts[t.sector] || 0) + 1;
+                }
+                if (t.multiplier === 2 && t.sector > 0) {
+                    const key = t.sector === 25 ? 'BULL' : `D${t.sector}`;
+                    if (!doubleBreakdown[key]) doubleBreakdown[key] = { hits: 0, total: 0 };
+                    doubleBreakdown[key].total++;
+                    if (t.isCheckoutHit) doubleBreakdown[key].hits++;
+                }
+            });
+
+            // Favourite / most hit sector
+            let topSector = 20, topSectorHits = 0;
+            Object.entries(sectorCounts).forEach(([sec, cnt]) => {
+                if (cnt > topSectorHits) { topSectorHits = cnt; topSector = sec; }
+            });
+
+            // Weakest main sector among [20, 19, 18, 16, 12]
+            const keySectors = [20, 19, 18, 16, 25];
+            let weakestSector = 16, minHits = Infinity;
+            keySectors.forEach(s => {
+                const c = sectorCounts[s] || 0;
+                if (c < minHits) { minHits = c; weakestSector = s; }
+            });
+
+            // Match-by-match average history for this specific player & mode
+            const matchIds = [...new Set(pThrows.map(t => t.matchId))];
+            const matchAvgs = matchIds.map((mId, idx) => {
+                const mThrows = pThrows.filter(t => t.matchId === mId);
+                const pts = mThrows.reduce((s, t) => s + (t.points || 0), 0);
+                const avg = mThrows.length > 0 ? +((pts / mThrows.length) * 3).toFixed(1) : 0;
+                return { label: `M${idx + 1}`, avg };
+            });
+
+            return {
+                totalDarts: pThrows.length,
+                overallAvg: overallAvg.toFixed(2),
+                first9Avg: first9Avg.toFixed(2),
+                doubleAtt,
+                doubleHit,
+                checkoutRate: checkoutRate.toFixed(1),
+                tripleHits,
+                bullHits,
+                topSector: topSectorHits > 0 ? (topSector == 25 ? 'BULL' : `Sektor ${topSector}`) : '-',
+                weakestSector: weakestSector === 25 ? 'Bullseye' : `Sektor ${weakestSector}`,
+                sectorCounts,
+                doubleBreakdown,
+                matchAvgs,
+                filteredThrows: pThrows
+            };
+        }
+
+        function setHeatmapOverlayMode(mode) {
+            heatmapOverlayMode = mode;
+            const btnVol = document.getElementById('hm-btn-volume');
+            const btnDbl = document.getElementById('hm-btn-doubles');
+            if (btnVol && btnDbl) {
+                if (mode === 'volume') {
+                    btnVol.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 transition';
+                    btnDbl.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition';
+                } else {
+                    btnDbl.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 transition';
+                    btnVol.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition';
+                }
+            }
+            renderDualHeatmapView();
+        }
 
         function renderSvgBoard(svgId, playerId) {
             const svg = document.getElementById(svgId);
             if (!svg) return;
+
+            const stats = computePlayerAnalytics(playerId, analyticsGameModeFilter);
+            const pThrows = stats.filteredThrows;
+            const maxSectorHits = Math.max(1, ...Object.values(stats.sectorCounts));
+
             let html = `<circle cx="0" cy="0" r="208" fill="#090d16" stroke="#334155" stroke-width="3" />`;
+
             BOARD_ORDER.forEach((sector, idx) => {
                 const centerAngle = idx * 18;
-                const pOuter = createAnnularSectorPath(107, 158, centerAngle - 9, centerAngle + 9);
-                html += `<path d="${pOuter}" fill="#0f172a" stroke="#334155" stroke-width="0.8" />`;
+                const startAngle = centerAngle - 9;
+                const endAngle = centerAngle + 9;
+                const hits = stats.sectorCounts[sector] || 0;
+                const intensity = Math.min(0.85, (hits / maxSectorHits) * 0.85);
+
+                const pInner = createAnnularSectorPath(17, 94, startAngle, endAngle);
+                const pTriple = createAnnularSectorPath(94, 107, startAngle, endAngle);
+                const pOuter = createAnnularSectorPath(107, 158, startAngle, endAngle);
+                const pDouble = createAnnularSectorPath(158, 172, startAngle, endAngle);
+
+                const baseFill = heatmapOverlayMode === 'volume' && hits > 0
+                    ? `rgba(16, 185, 129, ${(0.08 + intensity * 0.65).toFixed(2)})`
+                    : '#0f172a';
+
+                const doubleHitsOnSector = pThrows.filter(t => t.sector === sector && t.multiplier === 2).length;
+                const doubleFill = heatmapOverlayMode === 'doubles' && doubleHitsOnSector > 0
+                    ? `rgba(245, 158, 11, ${Math.min(0.95, 0.3 + doubleHitsOnSector * 0.2).toFixed(2)})`
+                    : 'rgba(30, 41, 59, 0.85)';
+
+                html += `
+                    <path d="${pInner}" fill="${baseFill}" stroke="#334155" stroke-width="0.7" />
+                    <path d="${pOuter}" fill="${baseFill}" stroke="#334155" stroke-width="0.7" />
+                    <path d="${pTriple}" fill="${hits > 0 ? 'rgba(16, 185, 129, 0.35)' : '#1e293b'}" stroke="#475569" stroke-width="0.7" />
+                    <path d="${pDouble}" fill="${doubleFill}" stroke="#475569" stroke-width="0.8" />
+                `;
+
                 const labelPos = polarToCartesian(0, 0, 190, centerAngle);
                 html += `<text x="${labelPos.x.toFixed(1)}" y="${(labelPos.y + 4).toFixed(1)}" text-anchor="middle" fill="#f8fafc" font-family="JetBrains Mono" font-weight="800" font-size="13">${sector}</text>`;
             });
+
             html += `<circle cx="0" cy="0" r="17" fill="#10b981" fill-opacity="0.65" /><circle cx="0" cy="0" r="7.5" fill="#e11d48" />`;
 
-            const pThrows = appDB.throws.filter(t => t.playerId === playerId);
-            pThrows.slice(-120).forEach(t => {
-                html += `<circle cx="${t.x}" cy="${t.y}" r="3.5" fill="${t.isCheckoutHit ? '#f59e0b' : '#38bdf8'}" fill-opacity="0.85" stroke="#080d1a" stroke-width="1" />`;
+            pThrows.slice(-200).forEach(t => {
+                if (heatmapOverlayMode === 'doubles' && t.multiplier !== 2 && !t.isDoubleAttempt) return;
+                const dotColor = t.isCheckoutHit ? '#f59e0b' : (t.multiplier === 3 ? '#10b981' : '#38bdf8');
+                html += `<circle cx="${t.x}" cy="${t.y}" r="4.2" fill="${dotColor}" fill-opacity="0.92" stroke="#080d1a" stroke-width="1.2" />`;
             });
 
             svg.innerHTML = html;
@@ -1420,104 +2429,271 @@
         function renderDualHeatmapView() {
             const pA = appDB.players.find(p => p.id === appDB.activePlayerId);
             const pB = appDB.players.find(p => p.id === appDB.activePlayerIdB);
+            const modeLabel = getModeDisplayName(analyticsGameModeFilter);
 
             if (pA) {
+                const statsA = computePlayerAnalytics(pA.id, analyticsGameModeFilter);
                 document.getElementById('hm-player-a-title').textContent = `${pA.name} ("${pA.nickname}")`;
+                const subA = document.getElementById('hm-player-a-subtitle');
+                if (subA) subA.textContent = `Modus: ${modeLabel}`;
                 renderSvgBoard('heatmap-dartboard-svg-a', pA.id);
-                const throwsA = appDB.throws.filter(t => t.playerId === pA.id);
-                const dAttA = throwsA.filter(t => t.isDoubleAttempt).length;
-                const dHitA = throwsA.filter(t => t.isCheckoutHit).length;
                 document.getElementById('hm-player-a-stats').innerHTML = `
-                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400">Erfasste Darts</div><div class="text-white font-bold">${throwsA.length}</div></div>
-                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400">Doppel-Quote</div><div class="text-emerald-400 font-bold">${dAttA > 0 ? Math.round((dHitA/dAttA)*100) : 0}%</div></div>
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Darts (${analyticsGameModeFilter === 'ALL' ? 'Alle' : analyticsGameModeFilter})</div><div class="text-white font-bold">${statsA.totalDarts}</div></div>
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Top-Sektor</div><div class="text-sky-400 font-bold">${statsA.topSector}</div></div>
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Doppel-Quote</div><div class="text-emerald-400 font-bold">${statsA.checkoutRate}% (${statsA.doubleHit}/${statsA.doubleAtt})</div></div>
                 `;
             }
 
             if (pB) {
+                const statsB = computePlayerAnalytics(pB.id, analyticsGameModeFilter);
                 document.getElementById('hm-player-b-title').textContent = `${pB.name} ("${pB.nickname}")`;
+                const subB = document.getElementById('hm-player-b-subtitle');
+                if (subB) subB.textContent = `Modus: ${modeLabel}`;
                 renderSvgBoard('heatmap-dartboard-svg-b', pB.id);
-                const throwsB = appDB.throws.filter(t => t.playerId === pB.id);
-                const dAttB = throwsB.filter(t => t.isDoubleAttempt).length;
-                const dHitB = throwsB.filter(t => t.isCheckoutHit).length;
                 document.getElementById('hm-player-b-stats').innerHTML = `
-                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400">Erfasste Darts</div><div class="text-white font-bold">${throwsB.length}</div></div>
-                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400">Doppel-Quote</div><div class="text-amber-400 font-bold">${dAttB > 0 ? Math.round((dHitB/dAttB)*100) : 0}%</div></div>
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Darts (${analyticsGameModeFilter === 'ALL' ? 'Alle' : analyticsGameModeFilter})</div><div class="text-white font-bold">${statsB.totalDarts}</div></div>
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Top-Sektor</div><div class="text-sky-400 font-bold">${statsB.topSector}</div></div>
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Doppel-Quote</div><div class="text-amber-400 font-bold">${statsB.checkoutRate}% (${statsB.doubleHit}/${statsB.doubleAtt})</div></div>
                 `;
             }
+        }
+
+        function renderDoublesBreakdownHTML(doubleBreakdown, accentClass = 'text-emerald-400') {
+            const entries = Object.entries(doubleBreakdown).sort((a, b) => b[1].total - a[1].total).slice(0, 6);
+            if (entries.length === 0) {
+                return `<div class="col-span-full text-slate-500 text-xs py-2">Noch keine Doppeltreffer im gewählten Spielmodus erfasst.</div>`;
+            }
+            return entries.map(([dbl, data]) => `
+                <div class="bg-slate-900 px-3 py-2 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <span class="font-bold text-white">${dbl}</span>
+                    <span class="${accentClass} font-bold">${data.hits} Check / ${data.total}x</span>
+                </div>
+            `).join('');
         }
 
         function renderDualCheckoutView() {
             const pA = appDB.players.find(p => p.id === appDB.activePlayerId);
             const pB = appDB.players.find(p => p.id === appDB.activePlayerIdB);
+            const modeLabel = getModeDisplayName(analyticsGameModeFilter);
 
             if (pA) {
-                document.getElementById('co-player-a-name').textContent = pA.name;
-                const throwsA = appDB.throws.filter(t => t.playerId === pA.id);
-                const attA = throwsA.filter(t => t.isDoubleAttempt).length;
-                const hitA = throwsA.filter(t => t.isCheckoutHit).length;
-                document.getElementById('co-a-rate').textContent = `${attA > 0 ? ((hitA/attA)*100).toFixed(1) : 0.0}%`;
-                document.getElementById('co-a-avg').textContent = throwsA.length > 0 ? '64.5' : '0.00';
-                document.getElementById('co-a-f9').textContent = throwsA.length > 0 ? '71.2' : '0.00';
+                const statsA = computePlayerAnalytics(pA.id, analyticsGameModeFilter);
+                document.getElementById('co-player-a-name').textContent = `${pA.name} (${statsA.totalDarts} Darts)`;
+                const badgeA = document.getElementById('co-player-a-mode-badge');
+                if (badgeA) badgeA.textContent = `Gefiltert nach: ${modeLabel}`;
+                document.getElementById('co-a-rate').textContent = `${statsA.checkoutRate}%`;
+                document.getElementById('co-a-avg').textContent = statsA.overallAvg;
+                document.getElementById('co-a-f9').textContent = statsA.first9Avg;
+                const tonsA = document.getElementById('co-a-tons');
+                if (tonsA) tonsA.textContent = `${statsA.tripleHits}T / ${statsA.bullHits}B`;
+                const dblA = document.getElementById('co-a-doubles-breakdown');
+                if (dblA) dblA.innerHTML = renderDoublesBreakdownHTML(statsA.doubleBreakdown, 'text-emerald-400');
 
                 const ctxA = document.getElementById('chart-checkout-trend-a');
                 if (ctxA) {
                     if (trendChartInstanceA) trendChartInstanceA.destroy();
+                    const labelsA = statsA.matchAvgs.length > 0 ? statsA.matchAvgs.map(m => m.label) : ['Start'];
+                    const dataA = statsA.matchAvgs.length > 0 ? statsA.matchAvgs.map(m => m.avg) : [0];
                     trendChartInstanceA = new Chart(ctxA, {
                         type: 'line',
-                        data: { labels: ['M1', 'M2', 'M3', 'M4'], datasets: [{ label: 'Average', data: [58, 62, 60, 65], borderColor: '#10b981', tension: 0.3 }] },
+                        data: { labels: labelsA, datasets: [{ label: `${pA.name} Avg (${modeLabel})`, data: dataA, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.3 }] },
                         options: { responsive: true, maintainAspectRatio: false }
                     });
                 }
             }
 
             if (pB) {
-                document.getElementById('co-player-b-name').textContent = pB.name;
-                const throwsB = appDB.throws.filter(t => t.playerId === pB.id);
-                const attB = throwsB.filter(t => t.isDoubleAttempt).length;
-                const hitB = throwsB.filter(t => t.isCheckoutHit).length;
-                document.getElementById('co-b-rate').textContent = `${attB > 0 ? ((hitB/attB)*100).toFixed(1) : 0.0}%`;
-                document.getElementById('co-b-avg').textContent = throwsB.length > 0 ? '59.1' : '0.00';
-                document.getElementById('co-b-f9').textContent = throwsB.length > 0 ? '66.4' : '0.00';
+                const statsB = computePlayerAnalytics(pB.id, analyticsGameModeFilter);
+                document.getElementById('co-player-b-name').textContent = `${pB.name} (${statsB.totalDarts} Darts)`;
+                const badgeB = document.getElementById('co-player-b-mode-badge');
+                if (badgeB) badgeB.textContent = `Gefiltert nach: ${modeLabel}`;
+                document.getElementById('co-b-rate').textContent = `${statsB.checkoutRate}%`;
+                document.getElementById('co-b-avg').textContent = statsB.overallAvg;
+                document.getElementById('co-b-f9').textContent = statsB.first9Avg;
+                const tonsB = document.getElementById('co-b-tons');
+                if (tonsB) tonsB.textContent = `${statsB.tripleHits}T / ${statsB.bullHits}B`;
+                const dblB = document.getElementById('co-b-doubles-breakdown');
+                if (dblB) dblB.innerHTML = renderDoublesBreakdownHTML(statsB.doubleBreakdown, 'text-amber-400');
 
                 const ctxB = document.getElementById('chart-checkout-trend-b');
                 if (ctxB) {
                     if (trendChartInstanceB) trendChartInstanceB.destroy();
+                    const labelsB = statsB.matchAvgs.length > 0 ? statsB.matchAvgs.map(m => m.label) : ['Start'];
+                    const dataB = statsB.matchAvgs.length > 0 ? statsB.matchAvgs.map(m => m.avg) : [0];
                     trendChartInstanceB = new Chart(ctxB, {
                         type: 'line',
-                        data: { labels: ['M1', 'M2', 'M3', 'M4'], datasets: [{ label: 'Average', data: [52, 55, 58, 61], borderColor: '#f59e0b', tension: 0.3 }] },
+                        data: { labels: labelsB, datasets: [{ label: `${pB.name} Avg (${modeLabel})`, data: dataB, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.15)', fill: true, tension: 0.3 }] },
                         options: { responsive: true, maintainAspectRatio: false }
                     });
                 }
             }
         }
 
+        function regenerateTrainingPlan(showFeedback = false) {
+            renderTrainingView();
+            if (showFeedback) showToast('5-Tage-Trainingsplan anhand deiner aktuellen Schwachstellen aktualisiert!', 'emerald');
+        }
+
         function renderTrainingView() {
-            document.getElementById('training-days-container').innerHTML = `
-                <div class="broadcast-card rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-2">
-                    <div class="font-bold text-white text-base">Tag 1: Doppel-Fokus & Checkout-Routine</div>
-                    <p class="text-xs text-slate-300">50 Darts auf dein gewähltes Lieblingsdoppel (Ziel: mind. 25% Trefferquote).</p>
+            const container = document.getElementById('training-days-container');
+            if (!container) return;
+            const pA = appDB.players.find(p => p.id === appDB.activePlayerId);
+            const stats = pA ? computePlayerAnalytics(pA.id, 'ALL') : null;
+            const favDbl = pA?.favDouble || 'D16';
+            const targetAvg = pA?.targetAvg || 65;
+            const weakSec = stats?.weakestSector || 'Sektor 16';
+
+            const days = [
+                {
+                    day: 'Tag 1: Lieblingsdoppel & Checkout-Sicherheit',
+                    focus: `${favDbl} & Standard-Auswege`,
+                    desc: `Wirf 3x 21 Darts gezielt auf dein Lieblingsdoppel ${favDbl} sowie die halbierten Auswege. Aktuelle Doppel-Quote: ${stats ? stats.checkoutRate : '0.0'}%.`,
+                    color: 'border-l-emerald-500'
+                },
+                {
+                    day: 'Tag 2: Schwachstellen-Eliminierung auf dem Board',
+                    focus: `Fokus: ${weakSec}`,
+                    desc: `Deine Heatmap zeigt aktuell die geringste Trefferdichte auf ${weakSec}. Spiele 15 Minuten lang Segment-Training (Single, Triple, Double) exklusiv auf diesem Sektor.`,
+                    color: 'border-l-amber-500'
+                },
+                {
+                    day: 'Tag 3: First-9 Power-Scoring (T20 / T19 Wechsel)',
+                    focus: `Ziel-Average: ${targetAvg}.0+`,
+                    desc: `Dein aktueller First-9-Average liegt bei ${stats ? stats.first9Avg : '0.00'}. Wirf 10 Aufnahmen à 3 Darts: Wenn Dart 1 die T20 blockiert, wechsle sofort flüssig auf T19.`,
+                    color: 'border-l-sky-500'
+                },
+                {
+                    day: 'Tag 4: 121 Checkout-Leiter unter Druck',
+                    focus: '2-Dart & 3-Dart Finishes (61 bis 121)',
+                    desc: 'Starte bei 61 Rest mit 3 Darts. Checkst du, gehst du +10 Punkte hoch – verfehlst du, 1 Punkt zurück. Trainiert das automatische Stellen auf dein Lieblingsdoppel.',
+                    color: 'border-l-purple-500'
+                },
+                {
+                    day: 'Tag 5: Match-Simulation & Cricket-Präzision',
+                    focus: 'Best of 5 Legs (501 DO) + 1 Runde Cricket',
+                    desc: 'Wende das Gelernte im Live Match Scorer an. Achte besonders auf den ersten Setup-Dart bei Restwerten zwischen 81 und 130.',
+                    color: 'border-l-rose-500'
+                }
+            ];
+
+            container.innerHTML = days.map(d => `
+                <div class="broadcast-card rounded-2xl p-5 border-l-4 ${d.color} flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="space-y-1">
+                        <div class="font-extrabold text-white text-base">${d.day}</div>
+                        <p class="text-xs text-slate-300">${d.desc}</p>
+                    </div>
+                    <span class="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-emerald-400 font-mono font-bold text-xs shrink-0">${d.focus}</span>
                 </div>
-            `;
+            `).join('');
         }
 
         function renderProfilesView() {
             const grid = document.getElementById('profiles-roster-grid');
             if (!grid) return;
             if (appDB.players.length === 0) {
-                grid.innerHTML = `<div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400">Noch keine Spielerprofile vorhanden. Erstelle rechts dein erstes Profil!</div>`;
+                grid.innerHTML = `<div class="col-span-full p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400">Noch keine Spielerprofile vorhanden. Erstelle rechts dein erstes Profil!</div>`;
+            } else {
+                grid.innerHTML = appDB.players.map(p => {
+                    const stats = computePlayerAnalytics(p.id, 'ALL');
+                    return `
+                        <div class="broadcast-card rounded-2xl p-4 border border-slate-800 flex flex-col justify-between gap-3">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="font-extrabold text-white text-base">${p.name} <span class="text-xs text-emerald-400 font-mono">("${p.nickname}")</span></div>
+                                    <div class="text-xs text-slate-400 mt-0.5">${p.setup} • Fav: <strong class="text-amber-400">${p.favDouble}</strong></div>
+                                </div>
+                                <button onclick="deletePlayerProfile('${p.id}')" class="px-2.5 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold transition" title="Profil löschen">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-1.5 text-center font-mono text-[11px] pt-2 border-t border-slate-800/80">
+                                <div class="bg-slate-900/90 p-1.5 rounded-lg"><div class="text-[9px] text-slate-500">Avg</div><div class="text-white font-bold">${stats.overallAvg}</div></div>
+                                <div class="bg-slate-900/90 p-1.5 rounded-lg"><div class="text-[9px] text-slate-500">Checkout</div><div class="text-emerald-400 font-bold">${stats.checkoutRate}%</div></div>
+                                <div class="bg-slate-900/90 p-1.5 rounded-lg"><div class="text-[9px] text-slate-500">Darts</div><div class="text-amber-400 font-bold">${stats.totalDarts}</div></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            renderH2HComparison();
+        }
+
+        function renderH2HComparison() {
+            const container = document.getElementById('h2h-stats-container');
+            const badge = document.getElementById('h2h-versus-badge');
+            if (!container) return;
+
+            const pA = appDB.players.find(p => p.id === appDB.activePlayerId);
+            const pB = appDB.players.find(p => p.id === appDB.activePlayerIdB);
+
+            if (!pA || !pB) {
+                container.innerHTML = `<div class="text-xs text-slate-400">Lege mindestens zwei Spielerprofile an, um direkte Head-to-Head-Duelle auszuwerten.</div>`;
                 return;
             }
-            grid.innerHTML = appDB.players.map(p => `
-                <div class="broadcast-card rounded-2xl p-4 border border-slate-800 flex justify-between items-center">
+
+            if (badge) badge.textContent = `${pA.name} vs. ${pB.name}`;
+
+            // Find all completed matches where both pA and pB participated
+            const sharedMatches = appDB.matches.filter(m =>
+                m.players && m.players.some(pl => pl.id === pA.id) && m.players.some(pl => pl.id === pB.id)
+            );
+
+            let winsA = 0, winsB = 0, legsA = 0, legsB = 0, highFinishA = 0, highFinishB = 0;
+            sharedMatches.forEach(m => {
+                if (m.winnerId === pA.id) winsA++;
+                if (m.winnerId === pB.id) winsB++;
+                const recA = m.players.find(pl => pl.id === pA.id);
+                const recB = m.players.find(pl => pl.id === pB.id);
+                if (recA) {
+                    legsA += recA.legsWon || 0;
+                    if ((recA.highestFinish || 0) > highFinishA) highFinishA = recA.highestFinish;
+                }
+                if (recB) {
+                    legsB += recB.legsWon || 0;
+                    if ((recB.highestFinish || 0) > highFinishB) highFinishB = recB.highestFinish;
+                }
+            });
+
+            const statsA = computePlayerAnalytics(pA.id, 'ALL');
+            const statsB = computePlayerAnalytics(pB.id, 'ALL');
+
+            container.innerHTML = `
+                <div class="grid grid-cols-3 items-center text-center bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800">
                     <div>
-                        <div class="font-extrabold text-white text-base">${p.name} <span class="text-xs text-emerald-400 font-mono">("${p.nickname}")</span></div>
-                        <div class="text-xs text-slate-400 mt-0.5">Setup: ${p.setup} | Lieblingsdoppel: <strong class="text-amber-400">${p.favDouble}</strong></div>
+                        <div class="text-xs font-bold text-emerald-400 truncate">${pA.name}</div>
+                        <div class="text-2xl sm:text-3xl font-mono font-extrabold text-white mt-0.5">${winsA}</div>
+                        <div class="text-[10px] text-slate-400">Match-Siege</div>
                     </div>
-                    <button onclick="deletePlayerProfile('${p.id}')" class="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold transition">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <div class="border-x border-slate-800 px-2">
+                        <div class="text-[10px] font-mono uppercase text-slate-400">Direkte Duelle</div>
+                        <div class="text-lg font-mono font-extrabold text-amber-400 my-0.5">${sharedMatches.length}</div>
+                        <div class="text-[10px] font-mono text-slate-400">Legs: ${legsA} : ${legsB}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-amber-400 truncate">${pB.name}</div>
+                        <div class="text-2xl sm:text-3xl font-mono font-extrabold text-white mt-0.5">${winsB}</div>
+                        <div class="text-[10px] text-slate-400">Match-Siege</div>
+                    </div>
                 </div>
-            `).join('');
+
+                <div class="grid grid-cols-3 gap-2 text-center font-mono text-xs">
+                    <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                        <div class="text-emerald-400 font-bold">${statsA.overallAvg}</div>
+                        <div class="text-[10px] text-slate-400 my-0.5">3-Dart Avg</div>
+                        <div class="text-amber-400 font-bold">${statsB.overallAvg}</div>
+                    </div>
+                    <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                        <div class="text-emerald-400 font-bold">${statsA.checkoutRate}%</div>
+                        <div class="text-[10px] text-slate-400 my-0.5">Doppel-Quote</div>
+                        <div class="text-amber-400 font-bold">${statsB.checkoutRate}%</div>
+                    </div>
+                    <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
+                        <div class="text-emerald-400 font-bold">${highFinishA || '-'}</div>
+                        <div class="text-[10px] text-slate-400 my-0.5">H2H High-Finish</div>
+                        <div class="text-amber-400 font-bold">${highFinishB || '-'}</div>
+                    </div>
+                </div>
+            `;
         }
 
         function createNewPlayerProfile() {
@@ -1595,6 +2771,10 @@
             populateMatchSetupCheckboxes();
             buildInteractiveDartboardSVG();
             updateSidebarStats();
+
+            if (appDB.players.length > 0) {
+                startNewMatch(false);
+            }
 
             document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
                 document.getElementById('sidebar-nav')?.classList.toggle('hidden');
