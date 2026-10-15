@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DartPro Analytics & Scorer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts: Inter & JetBrains Mono -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        slate: {
+                            850: '#141e33',
+                            900: '#0f172a',
+                            950: '#080d1a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #080d1a;
+            color: #f8fafc;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
+        .dart-bed {
+            transition: filter 0.12s ease, opacity 0.15s ease, stroke-width 0.12s ease;
+            cursor: pointer;
+        }
+        .dart-bed:hover {
+            filter: brightness(1.35) drop-shadow(0 0 6px rgba(16, 185, 129, 0.7));
+            stroke: #10b981;
+            stroke-width: 1.5px;
+        }
+        .broadcast-card {
+            background: linear-gradient(145deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+            border: 1px solid rgba(51, 65, 85, 0.7);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+        .active-nav {
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.18) 0%, rgba(16, 185, 129, 0.02) 100%);
+            border-left: 4px solid #10b981;
+            color: #10b981;
+        }
+        .glow-emerald { box-shadow: 0 0 18px rgba(16, 185, 129, 0.35); }
+        .glow-gold { box-shadow: 0 0 18px rgba(245, 158, 11, 0.35); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row font-sans antialiased selection:bg-emerald-500 selection:text-slate-950">
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <aside class="w-full lg:w-72 bg-slate-900 border-b lg:border-b-0 lg:border-r border-slate-800 flex-shrink-0 flex flex-col justify-between z-30">
+        <div>
+            <!-- Brand Header -->
+            <div class="p-4 sm:p-5 flex items-center justify-between border-b border-slate-800/80">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center shadow-lg shadow-emerald-900/40">
+                        <i class="fa-solid fa-bullseye text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-extrabold text-lg tracking-tight text-white">DART<span class="text-emerald-400">PRO</span></h1>
+                            <span class="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Mobile Pro</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Pixel 7 Pro Edition</p>
+                    </div>
+                </div>
+                <button id="mobile-menu-btn" class="lg:hidden text-slate-300 hover:text-white p-2.5 rounded-xl bg-slate-800">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Global Dual Player Selection Bar for Analysis -->
+            <div class="px-4 py-3 bg-slate-950/70 border-b border-slate-800/80 space-y-2">
+                <div>
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                        <i class="fa-solid fa-user-astronaut text-emerald-400 mr-1"></i> Primär-Analysespieler
+                    </label>
+                    <select id="global-player-select" onchange="handleGlobalPlayerChange(this.value)" class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500 font-medium">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                        <i class="fa-solid fa-users text-amber-400 mr-1"></i> Vergleichsspieler (Split-Screen)
+                    </label>
+                    <select id="global-player-select-b" onchange="renderActiveViews()" class="w-full bg-slate-800 border border-slate-700 text-white text-sm rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500 font-medium">
+                        <!-- Populated via JS -->
+                    </select>
+                </div>
+            </div>
+
+            <!-- Nav Links -->
+            <nav id="sidebar-nav" class="hidden lg:flex flex-col p-3 gap-1.5">
+                <button onclick="switchTab('scorer')" id="nav-scorer" class="nav-btn active-nav flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-left">
+                    <i class="fa-solid fa-gamepad w-5 text-center text-base"></i>
+                    <div>
+                        <div>Live Match Scorer</div>
+                        <div class="text-[11px] font-normal text-slate-400">501, Cricket, Clock & PDC Route</div>
+                    </div>
+                </button>
+                <button onclick="switchTab('heatmap')" id="nav-heatmap" class="nav-btn text-slate-300 hover:bg-slate-800/60 flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-left">
+                    <i class="fa-solid fa-fire-flame-curved w-5 text-center text-base"></i>
+                    <div>
+                        <div>Board Heatmap & Sektoren</div>
+                        <div class="text-[11px] font-normal text-slate-400">Trefferbild & Schwachstellen</div>
+                    </div>
+                </button>
+                <button onclick="switchTab('checkout')" id="nav-checkout" class="nav-btn text-slate-300 hover:bg-slate-800/60 flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-left">
+                    <i class="fa-solid fa-chart-line w-5 text-center text-base"></i>
+                    <div>
+                        <div>Checkout-Analyse & Trends</div>
+                        <div class="text-[11px] font-normal text-slate-400">Doppel-Quoten & Average-Verlauf</div>
+                    </div>
+                </button>
+                <button onclick="switchTab('training')" id="nav-training" class="nav-btn text-slate-300 hover:bg-slate-800/60 flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-left">
+                    <i class="fa-solid fa-dumbbell w-5 text-center text-base"></i>
+                    <div>
+                        <div>Dynamischer Trainingsplan</div>
+                        <div class="text-[11px] font-normal text-slate-400">5-Tage KI-Coach & Mini-Drills</div>
+                    </div>
+                </button>
+                <button onclick="switchTab('profiles')" id="nav-profiles" class="nav-btn text-slate-300 hover:bg-slate-800/60 flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-semibold transition-all text-left">
+                    <i class="fa-solid fa-users-gear w-5 text-center text-base"></i>
+                    <div>
+                        <div>Spielerprofile & Daten</div>
+                        <div class="text-[11px] font-normal text-slate-400">H2H, Profile & Backup</div>
+                    </div>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Footer Stats -->
+        <div class="hidden lg:block p-4 m-3 rounded-xl bg-slate-950/90 border border-slate-800/80">
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+                <span>Lokale DB</span>
+                <span class="flex items-center gap-1 text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Gesichert</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-center">
+                <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+                    <div id="sidebar-stat-matches" class="font-mono font-bold text-white text-sm">0</div>
+                    <div class="text-[10px] text-slate-400">Matches</div>
+                </div>
+                <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+                    <div id="sidebar-stat-darts" class="font-mono font-bold text-emerald-400 text-sm">0</div>
+                    <div class="text-[10px] text-slate-400">Darts</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <!-- VIEW 1: LIVE MATCH SCORER -->
+        <section id="view-scorer" class="tab-view space-y-6">
+            <!-- Top Match Configuration Bar -->
+            <div class="broadcast-card rounded-2xl p-4 sm:p-5">
+                <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                    <div>
+                        <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-semibold">PDC Broadcast Center</span>
+                        <h2 class="text-xl sm:text-2xl font-extrabold text-white">Live Match Scorer & Wurferfassung</h2>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button onclick="toggleMatchSetupModal()" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm flex items-center gap-2 transition shadow-lg shadow-emerald-950/50">
+                            <i class="fa-solid fa-play"></i> Neues Match konfigurieren
+                        </button>
+                        <button onclick="undoLastDart()" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm border border-slate-700 flex items-center gap-2 transition">
+                            <i class="fa-solid fa-rotate-left text-amber-400"></i> Wurf Rückgängig
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Match Setup Collapsible Panel -->
+                <div id="match-setup-panel" class="mt-5 pt-5 border-t border-slate-800 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Spielmodus</label>
+                        <select id="setup-gamemode" onchange="handleGameModeSetupChange()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:border-emerald-500 focus:outline-none">
+                            <option value="501">501 (Standard)</option>
+                            <option value="301">301 (Schnellspiel)</option>
+                            <option value="701">701 (Marathon)</option>
+                            <option value="Cricket">Standard Cricket (15-20 & Bull)</option>
+                            <option value="AroundTheClock">Around the Clock (1-20 + Bull)</option>
+                        </select>
+                    </div>
+                    <div id="setup-x01-options">
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">In / Out Modus</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="setup-inmode" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2.5 text-sm text-white">
+                                <option value="SI">Single In</option>
+                                <option value="DI">Double In</option>
+                            </select>
+                            <select id="setup-outmode" class="bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-2.5 text-sm text-white">
+                                <option value="DO" selected>Double Out</option>
+                                <option value="MO">Master Out</option>
+                                <option value="SO">Single Out</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Distanz (First to X Legs)</label>
+                        <select id="setup-legs" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white">
+                            <option value="1">Best of 1 (1 Leg)</option>
+                            <option value="2">First to 2 Legs</option>
+                            <option value="3" selected>First to 3 Legs (Best of 5)</option>
+                            <option value="5">First to 5 Legs (Best of 9)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Spieler auswählen (1-4)</label>
+                        <div id="setup-player-checkboxes" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1 bg-slate-900 rounded-xl border border-slate-800">
+                            <!-- Checkboxes injected by JS -->
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 lg:col-span-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-3">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                            <div>
+                                <span class="text-[11px] font-mono uppercase tracking-wider text-amber-400 font-bold">
+                                    <i class="fa-solid fa-bullseye mr-1"></i> Anwurf-Ermittlung (Wer beginnt Leg 1?)
+                                </span>
+                                <h4 class="text-sm font-bold text-white">Startspieler per Münzwurf, Ausbullen oder manuell bestimmen</h4>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button" onclick="triggerCoinToss()" class="px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-coins"></i> Münzwurf auslosen
+                                </button>
+                                <button type="button" onclick="openBullOffModal()" class="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs flex items-center gap-1.5 transition">
+                                    <i class="fa-solid fa-crosshairs"></i> Ausbullen (Bullseye-Wurf)
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
+                            <div id="starter-status-banner" class="text-xs text-slate-300 flex items-center gap-2">
+                                <i class="fa-solid fa-circle-info text-emerald-400"></i>
+                                <span>Wähle den Startspieler direkt aus oder nutze Münzwurf / Ausbullen:</span>
+                            </div>
+                            <div id="setup-starter-pills" class="flex flex-wrap items-center gap-2">
+                                <!-- Starter radio pills injected via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 lg:col-span-4 flex justify-end">
+                        <button onclick="startNewMatch(true)" class="w-full md:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-sm shadow-lg glow-emerald transition transform hover:scale-[1.01]">
+                            <i class="fa-solid fa-expand mr-1.5"></i> Match im Vollbild starten ("Game On!")
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fullscreen Match Top Control Bar -->
+            <div id="fullscreen-match-topbar" class="hidden broadcast-card rounded-2xl px-5 py-3.5 flex flex-wrap items-center justify-between gap-4 border-l-4 border-l-emerald-500">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+                        <i class="fa-solid fa-tv"></i>
+                    </div>
+                    <div>
+                        <div class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">Fokussierter Vollbild-Matchmodus</div>
+                        <div id="fs-match-title" class="text-base font-extrabold text-white">Live Match Arena</div>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <button onclick="undoLastDart()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs border border-slate-700 flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-rotate-left text-amber-400"></i> Wurf Rückgängig
+                    </button>
+                    <button onclick="exitFullscreenMatchToMenu()" class="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold text-xs border border-rose-500/40 flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-right-from-bracket"></i> Match abbrechen / Hauptmenü
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Scorer Grid -->
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+                <!-- Left Column -->
+                <div class="xl:col-span-7 space-y-5">
+                    <div class="broadcast-card rounded-2xl p-4 sm:p-5 border-l-4 border-l-emerald-500">
+                        <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                            <div class="flex items-center gap-3">
+                                <span id="live-mode-badge" class="px-3 py-1 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-xs">501 DO - FT 3 LEGS</span>
+                                <span id="live-turn-indicator" class="text-sm text-slate-300 font-medium">Am Oche: <strong class="text-white">-</strong></span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-400 uppercase font-semibold">Aufnahme:</span>
+                                <div id="current-turn-slots" class="flex items-center gap-2">
+                                    <div class="w-12 sm:w-14 h-9 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center font-mono font-bold text-sm text-slate-400">-</div>
+                                    <div class="w-12 sm:w-14 h-9 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center font-mono font-bold text-sm text-slate-400">-</div>
+                                    <div class="w-12 sm:w-14 h-9 rounded-lg bg-slate-900 border border-slate-700 flex items-center justify-center font-mono font-bold text-sm text-slate-400">-</div>
+                                </div>
+                                <div id="current-turn-sum" class="ml-2 px-3 py-1.5 rounded-lg bg-slate-800 font-mono font-extrabold text-amber-400 text-sm">= 0</div>
+                            </div>
+                        </div>
+
+                        <!-- PDC Checkout Banner -->
+                        <div id="pdc-checkout-banner" class="hidden p-3.5 rounded-xl bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-9 h-9 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center font-extrabold text-sm">
+                                    <i class="fa-solid fa-crown"></i>
+                                </div>
+                                <div>
+                                    <div class="text-[11px] font-mono uppercase tracking-wider text-amber-300 font-bold">Empfohlener PDC Checkout-Weg</div>
+                                    <div id="pdc-route-subtext" class="text-xs text-slate-300">Finish in aktuellen Darts möglich</div>
+                                </div>
+                            </div>
+                            <div id="pdc-route-pills" class="flex items-center gap-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Player Scorecards -->
+                    <div id="live-player-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+                    <!-- Cricket Board Container -->
+                    <div id="cricket-board-container" class="hidden broadcast-card rounded-2xl p-5">
+                        <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-400 mb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-table-cells"></i> Standard Cricket Übersicht (15 - 20 & Bull)
+                        </h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-center border-collapse">
+                                <thead id="cricket-thead" class="bg-slate-900/90 text-xs uppercase text-slate-400 border-b border-slate-800"></thead>
+                                <tbody id="cricket-tbody" class="divide-y divide-slate-800/70 font-mono text-sm"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Throw Log Ticker -->
+                    <div class="broadcast-card rounded-2xl p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                <i class="fa-solid fa-clock-rotate-left text-emerald-400 mr-1"></i> Wurf-Protokoll (Aktuelles Leg)
+                            </span>
+                            <span id="leg-dart-counter" class="text-xs font-mono text-slate-400">0 Darts im Leg</span>
+                        </div>
+                        <div id="live-throw-log" class="flex gap-2 overflow-x-auto py-1 text-xs font-mono"></div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Board & Keypad -->
+                <div class="xl:col-span-5 broadcast-card rounded-2xl p-4 sm:p-5 space-y-5">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                        <div>
+                            <h3 class="font-bold text-white text-base">Präzisions-Wurfeingabe</h3>
+                            <p class="text-xs text-slate-400">Board antippen oder Tastenfeld nutzen</p>
+                        </div>
+                        <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+                            <button onclick="setScorerInputView('both')" id="input-mode-both" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950">Beides</button>
+                            <button onclick="setScorerInputView('board')" id="input-mode-board" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">Board</button>
+                            <button onclick="setScorerInputView('keypad')" id="input-mode-keypad" class="px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white">Keypad</button>
+                        </div>
+                    </div>
+
+                    <div id="scorer-board-wrapper" class="flex flex-col items-center justify-center relative">
+                        <div class="w-full max-w-[380px] aspect-square relative flex items-center justify-center">
+                            <svg id="scorer-dartboard-svg" viewBox="-220 -220 440 440" class="w-full h-full select-none drop-shadow-2xl"></svg>
+                        </div>
+                        <div class="flex items-center justify-between w-full mt-3 px-2 text-xs text-slate-400">
+                            <span id="board-hover-indicator" class="font-mono text-emerald-400 font-semibold">Sektor wählen...</span>
+                            <button onclick="recordDartThrow(0, 0, 'MISS', 195, -195)" class="px-3.5 py-2 rounded-xl bg-rose-500/25 hover:bg-rose-500/40 text-rose-300 border border-rose-500/40 font-bold transition">
+                                <i class="fa-solid fa-xmark mr-1"></i> Miss / 0
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="scorer-keypad-wrapper" class="space-y-3 pt-2 border-t border-slate-800/80">
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="setKeypadMultiplier(1)" id="mult-btn-1" class="py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-emerald-500 text-slate-950 shadow">Single (1x)</button>
+                            <button onclick="setKeypadMultiplier(2)" id="mult-btn-2" class="py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-800 text-rose-400 border border-rose-500/30 hover:bg-slate-700">Double (2x)</button>
+                            <button onclick="setKeypadMultiplier(3)" id="mult-btn-3" class="py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-800 text-amber-400 border border-amber-500/30 hover:bg-slate-700">Triple (3x)</button>
+                        </div>
+                        <div class="grid grid-cols-5 gap-1.5">
+                            <button onclick="handleKeypadNumber(1)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">1</button>
+                            <button onclick="handleKeypadNumber(2)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">2</button>
+                            <button onclick="handleKeypadNumber(3)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">3</button>
+                            <button onclick="handleKeypadNumber(4)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">4</button>
+                            <button onclick="handleKeypadNumber(5)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">5</button>
+                            <button onclick="handleKeypadNumber(6)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">6</button>
+                            <button onclick="handleKeypadNumber(7)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">7</button>
+                            <button onclick="handleKeypadNumber(8)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">8</button>
+                            <button onclick="handleKeypadNumber(9)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">9</button>
+                            <button onclick="handleKeypadNumber(10)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">10</button>
+                            <button onclick="handleKeypadNumber(11)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">11</button>
+                            <button onclick="handleKeypadNumber(12)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">12</button>
+                            <button onclick="handleKeypadNumber(13)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">13</button>
+                            <button onclick="handleKeypadNumber(14)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">14</button>
+                            <button onclick="handleKeypadNumber(15)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">15</button>
+                            <button onclick="handleKeypadNumber(16)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">16</button>
+                            <button onclick="handleKeypadNumber(17)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">17</button>
+                            <button onclick="handleKeypadNumber(18)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">18</button>
+                            <button onclick="handleKeypadNumber(19)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-white border border-slate-700">19</button>
+                            <button onclick="handleKeypadNumber(20)" class="py-3 rounded-lg bg-slate-800 hover:bg-slate-700 font-mono font-bold text-sm text-emerald-400 border border-emerald-500/40">20</button>
+                        </div>
+                        <div class="grid grid-cols-4 gap-2 pt-1">
+                            <button onclick="recordDartThrow(25, 1, 'S25', 0, 12)" class="py-3 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-xs">25 (Bull)</button>
+                            <button onclick="recordDartThrow(25, 2, 'BULL', 0, 0)" class="py-3 rounded-xl bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-300 font-mono font-bold text-xs">50 (Bulls.)</button>
+                            <button onclick="recordDartThrow(0, 0, 'MISS', 190, -190)" class="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-mono font-bold text-xs">0 (Miss)</button>
+                            <button onclick="undoLastDart()" class="py-3 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 font-bold text-xs"><i class="fa-solid fa-undo"></i> Zurück</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: HEATMAP (WITH DUAL PLAYER SPLIT SCREEN) -->
+        <section id="view-heatmap" class="tab-view hidden space-y-6">
+            <div class="broadcast-card rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-semibold">Thermische Trefferbild-Analyse</span>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-white">Board Heatmap & Dualer Spieler-Vergleich</h2>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex bg-slate-900 p-1 rounded-xl border border-slate-800">
+                        <button onclick="setHeatmapOverlayMode('volume')" id="hm-btn-volume" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-500 text-slate-950 transition">Treffer-Frequenz</button>
+                        <button onclick="setHeatmapOverlayMode('doubles')" id="hm-btn-doubles" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-300 hover:text-white transition">Doppel-Effizienz</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dual Split-Screen Heatmap Container -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+                <!-- Player A Heatmap Card -->
+                <div class="broadcast-card rounded-2xl p-5 flex flex-col items-center border-l-4 border-l-emerald-500">
+                    <div class="w-full flex items-center justify-between mb-3">
+                        <div>
+                            <h3 id="hm-player-a-title" class="font-bold text-white text-base">Spieler A: Trefferbild</h3>
+                            <p class="text-xs text-slate-400">Thermische Sektor-Dichte</p>
+                        </div>
+                        <span id="hm-player-a-tag" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold">Primär</span>
+                    </div>
+                    <div class="w-full max-w-[380px] aspect-square relative flex items-center justify-center my-2">
+                        <svg id="heatmap-dartboard-svg-a" viewBox="-220 -220 440 440" class="w-full h-full select-none drop-shadow-2xl"></svg>
+                    </div>
+                    <div id="hm-player-a-stats" class="w-full mt-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2 text-center text-xs font-mono"></div>
+                </div>
+
+                <!-- Player B Heatmap Card -->
+                <div class="broadcast-card rounded-2xl p-5 flex flex-col items-center border-l-4 border-l-amber-500">
+                    <div class="w-full flex items-center justify-between mb-3">
+                        <div>
+                            <h3 id="hm-player-b-title" class="font-bold text-white text-base">Spieler B: Trefferbild</h3>
+                            <p class="text-xs text-slate-400">Thermische Sektor-Dichte (Split-Screen)</p>
+                        </div>
+                        <span id="hm-player-b-tag" class="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-mono font-bold">Vergleich</span>
+                    </div>
+                    <div class="w-full max-w-[380px] aspect-square relative flex items-center justify-center my-2">
+                        <svg id="heatmap-dartboard-svg-b" viewBox="-220 -220 440 440" class="w-full h-full select-none drop-shadow-2xl"></svg>
+                    </div>
+                    <div id="hm-player-b-stats" class="w-full mt-4 pt-3 border-t border-slate-800 grid grid-cols-2 gap-2 text-center text-xs font-mono"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: CHECKOUT-ANALYSE (DUAL SPLIT-SCREEN COMPARISON) -->
+        <section id="view-checkout" class="tab-view hidden space-y-6">
+            <div class="broadcast-card rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-semibold">Finishing & Scoring Intelligence</span>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-white">Checkout-Quoten & Dualer Formvergleich</h2>
+                </div>
+            </div>
+
+            <!-- Dual Split-Screen Comparison Metrics -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Player A Metrics -->
+                <div class="broadcast-card rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h3 id="co-player-a-name" class="font-bold text-white text-lg">Spieler A</h3>
+                        <span class="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-mono font-bold">Primär</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                            <div class="text-[10px] uppercase text-slate-400">Checkout %</div>
+                            <div id="co-a-rate" class="font-mono font-extrabold text-base text-emerald-400">0.0%</div>
+                        </div>
+                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                            <div class="text-[10px] uppercase text-slate-400">Average</div>
+                            <div id="co-a-avg" class="font-mono font-extrabold text-base text-white">0.00</div>
+                        </div>
+                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                            <div class="text-[10px] uppercase text-slate-400">First-9</div>
+                            <div id="co-a-f9" class="font-mono font-extrabold text-base text-amber-400">0.00</div>
+                        </div>
+                    </div>
+                    <div class="h-48 w-full"><canvas id="chart-checkout-trend-a"></canvas></div>
+                </div>
+
+                <!-- Player B Metrics -->
+                <div class="broadcast-card rounded-2xl p-5 border-l-4 border-l-amber-500 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                        <h3 id="co-player-b-name" class="font-bold text-white text-lg">Spieler B</h3>
+                        <span class="px-3 py-1 rounded-lg bg-amber-500/20 text-amber-300 text-xs font-mono font-bold">Vergleich</span>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                            <div class="text-[10px] uppercase text-slate-400">Checkout %</div>
+                            <div id="co-b-rate" class="font-mono font-extrabold text-base text-amber-400">0.0%</div>
+                        </div>
+                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                            <div class="text-[10px] uppercase text-slate-400">Average</div>
+                            <div id="co-b-avg" class="font-mono font-extrabold text-base text-white">0.00</div>
+                        </div>
+                        <div class="bg-slate-900 p-3 rounded-xl border border-slate-800">
+                            <div class="text-[10px] uppercase text-slate-400">First-9</div>
+                            <div id="co-b-f9" class="font-mono font-extrabold text-base text-amber-400">0.00</div>
+                        </div>
+                    </div>
+                    <div class="h-48 w-full"><canvas id="chart-checkout-trend-b"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 4: TRAININGSPLAN -->
+        <section id="view-training" class="tab-view hidden space-y-6">
+            <div class="broadcast-card rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-semibold">Adaptives Coaching-System</span>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-white">Dynamischer 5-Tage-Trainingsplan</h2>
+                </div>
+                <button onclick="regenerateTrainingPlan(true)" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> Trainingsplan neu berechnen
+                </button>
+            </div>
+            <div id="training-days-container" class="space-y-3.5"></div>
+        </section>
+
+        <!-- VIEW 5: SPIELERPROFILE & DATEN -->
+        <section id="view-profiles" class="tab-view hidden space-y-6">
+            <div class="broadcast-card rounded-2xl p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                    <span class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-semibold">Kader, Profile & Backup</span>
+                    <h2 class="text-xl sm:text-2xl font-extrabold text-white">Spielerprofile & Daten-Manager</h2>
+                </div>
+                <div class="flex flex-wrap gap-2.5">
+                    <button onclick="exportAppDataJSON()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-2">
+                        <i class="fa-solid fa-download text-emerald-400"></i> Backup Export (JSON)
+                    </button>
+                    <label class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold flex items-center gap-2 cursor-pointer">
+                        <i class="fa-solid fa-upload text-sky-400"></i> Backup Import
+                        <input type="file" id="import-file-input" accept=".json" onchange="handleDataImport(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <div class="xl:col-span-7 space-y-4">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300">Deine gespeicherten Spielerprofile</h3>
+                    <div id="profiles-roster-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                </div>
+
+                <div class="xl:col-span-5 space-y-6">
+                    <div class="broadcast-card rounded-2xl p-5 space-y-4">
+                        <h3 class="font-bold text-white text-base flex items-center gap-2">
+                            <i class="fa-solid fa-user-plus text-emerald-400"></i> Neues Spielerprofil anlegen
+                        </h3>
+                        <div>
+                            <label class="block text-xs text-slate-400 mb-1">Spielername *</label>
+                            <input type="text" id="new-player-name" placeholder="z.B. Michael" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Spitzname</label>
+                                <input type="text" id="new-player-nick" placeholder="z.B. The Hawk" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Darts Setup</label>
+                                <input type="text" id="new-player-setup" placeholder="z.B. 23g Tungsten" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Lieblingsdoppel</label>
+                                <select id="new-player-favdouble" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                                    <!-- Injected via JS with D1-D20, Bull & Outer Bull -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-400 mb-1">Ziel-Average</label>
+                                <input type="number" id="new-player-targetavg" value="65" min="30" max="120" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white">
+                            </div>
+                        </div>
+                        <button onclick="createNewPlayerProfile()" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm transition">Profil jetzt anlegen</button>
+                    </div>
+
+                    <div class="broadcast-card rounded-2xl p-5 space-y-3 bg-slate-900/90 border border-slate-800 text-xs text-slate-300">
+                        <div class="font-bold text-white text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-circle-question text-amber-400"></i> Speicher-Kapazität & Pixel 7 Pro
+                        </div>
+                        <p>Diese Web-App speichert alle Daten lokal im <strong class="text-white">localStorage</strong> deines Browsers. Typischerweise stehen hier <strong class="text-emerald-400">5 MB bis 10 MB</strong> zur Verfügung – das reicht für über <strong class="text-white">50.000 erfasste Würfe und Hunderte Matches</strong> ohne Leistungsverlust.</p>
+                        <p>Durch die kompakten SVG-Vektoren und optimierte Touch-Events läuft die App butterweich auf dem <strong class="text-white">Google Pixel 7 Pro</strong> und allen modernen Smartphones im Vollbildmodus.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: AUSBULLEN -->
+    <div id="bulloff-modal" class="fixed inset-0 z-50 hidden bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="broadcast-card rounded-2xl max-w-lg w-full p-6 space-y-4 border border-emerald-500/40 shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                    <span class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 font-bold">Offizielles PDC Ausbullen</span>
+                    <h3 class="text-lg font-extrabold text-white">Wer wirft näher ans Bullseye?</h3>
+                </div>
+                <button onclick="closeBullOffModal()" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="bulloff-turn-prompt" class="p-3 rounded-xl bg-slate-900 border border-slate-800 text-center text-xs text-slate-200"></div>
+            <div class="flex flex-col items-center justify-center">
+                <div class="w-64 h-64 relative flex items-center justify-center">
+                    <svg id="bulloff-svg" viewBox="-120 -120 240 240" onclick="handleBullOffBoardClick(event)" class="w-full h-full cursor-crosshair select-none drop-shadow-xl rounded-full border border-slate-700 bg-slate-950">
+                        <circle cx="0" cy="0" r="115" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
+                        <circle cx="0" cy="0" r="85" fill="#1e293b" stroke="#475569" stroke-width="1" stroke-dasharray="4 3" />
+                        <circle cx="0" cy="0" r="52" fill="#0f172a" stroke="#475569" stroke-width="1" stroke-dasharray="3 3" />
+                        <circle cx="0" cy="0" r="26" fill="#10b981" fill-opacity="0.85" stroke="#f8fafc" stroke-width="1.5" />
+                        <circle cx="0" cy="0" r="11" fill="#e11d48" stroke="#f8fafc" stroke-width="1.5" />
+                        <line x1="-120" y1="0" x2="120" y2="0" stroke="rgba(148,163,184,0.2)" stroke-width="1" />
+                        <line x1="0" y1="-120" x2="0" y2="120" stroke="rgba(148,163,184,0.2)" stroke-width="1" />
+                        <g id="bulloff-markers-layer"></g>
+                    </svg>
+                </div>
+            </div>
+            <div id="bulloff-results-list" class="grid grid-cols-2 gap-2 text-xs font-mono"></div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-800">
+                <button onclick="simulateBullOffThrows()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold text-xs flex items-center gap-1.5">
+                    <i class="fa-solid fa-dice"></i> Würfe simulieren
+                </button>
+                <div class="flex items-center gap-2">
+                    <button onclick="resetBullOffModal()" class="px-3 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold">Neu werfen</button>
+                    <button onclick="closeBullOffModal()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs">Startspieler übernehmen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: POST-MATCH STATISTICS -->
+    <div id="post-match-modal" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+        <div class="broadcast-card rounded-2xl max-w-4xl w-full p-6 md:p-8 space-y-6 border border-emerald-500/50 shadow-2xl my-auto">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+                <div class="flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center text-2xl font-extrabold shadow-lg glow-gold">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <div>
+                        <span id="pm-mode-subtitle" class="text-xs font-mono uppercase tracking-widest text-emerald-400 font-bold">Offizieller Match-Bericht</span>
+                        <h2 id="pm-winner-headline" class="text-2xl md:text-3xl font-extrabold text-white">Sieger</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">Alle Würfe und Statistiken wurden im Profil gespeichert.</p>
+                    </div>
+                </div>
+                <div id="pm-final-score-badge" class="px-4 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-emerald-400 font-mono font-extrabold text-lg">3 : 1</div>
+            </div>
+
+            <div id="pm-players-stats-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-800">
+                <button onclick="closePostMatchAndGoToAnalytics()" class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-chart-line text-emerald-400"></i> Zur Analyse-Ansicht
+                </button>
+                <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto justify-end">
+                    <button onclick="closePostMatchToMainMenu()" class="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-bold text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-house"></i> Hauptmenü
+                    </button>
+                    <button onclick="startRematchFromModal()" class="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 text-slate-950 font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-rotate-right"></i> Revanche starten
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'dartpro_analytics_v5_db';
+        const BOARD_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+        const CRICKET_NUMBERS = [20, 19, 18, 17, 16, 15, 25];
+
+        const PDC_CHECKOUTS = {
+            170: ['T20', 'T20', 'BULL'], 167: ['T20', 'T19', 'BULL'], 164: ['T20', 'T18', 'BULL'],
+            161: ['T20', 'T17', 'BULL'], 160: ['T20', 'T20', 'D20'], 158: ['T20', 'T20', 'D19'],
+            157: ['T20', 'T19', 'D20'], 156: ['T20', 'T20', 'D18'], 155: ['T20', 'T19', 'D19'],
+            154: ['T20', 'T18', 'D20'], 153: ['T20', 'T19', 'D18'], 152: ['T20', 'T20', 'D16'],
+            151: ['T20', 'T17', 'D20'], 150: ['T20', 'T18', 'D18'], 149: ['T20', 'T19', 'D16'],
+            148: ['T20', 'T16', 'D20'], 147: ['T20', 'T17', 'D18'], 146: ['T20', 'T18', 'D16'],
+            145: ['T20', 'T15', 'D20'], 144: ['T20', 'T20', 'D12'], 141: ['T20', 'T19', 'D12'],
+            140: ['T20', 'T16', 'D16'], 138: ['T20', 'T18', 'D12'], 136: ['T20', 'T20', 'D8'],
+            135: ['BULL', 'T15', 'D20'], 132: ['BULL', 'BULL', 'D16'], 130: ['T20', 'T20', 'D5'],
+            128: ['T18', 'T14', 'D16'], 126: ['T19', 'T19', 'D6'], 125: ['25', 'T20', 'D20'],
+            124: ['T20', 'T16', 'D8'], 122: ['T18', 'T20', 'D4'], 121: ['T20', 'T11', 'D14'],
+            120: ['T20', 'S20', 'D20'], 118: ['T20', 'S18', 'D20'], 116: ['T20', 'S16', 'D20'],
+            115: ['T20', 'S15', 'D20'], 112: ['T20', 'S12', 'D20'], 110: ['T20', 'S18', 'D16'],
+            108: ['T20', 'S16', 'D16'], 107: ['T19', 'S18', 'D16'], 106: ['T20', 'S14', 'D16'],
+            105: ['T20', 'S13', 'D16'], 104: ['T18', 'S18', 'D16'], 101: ['T20', 'S9', 'D16'],
+            100: ['T20', 'D20'], 98: ['T20', 'D19'], 97: ['T19', 'D20'], 96: ['T20', 'D18'],
+            95: ['T19', 'D19'], 94: ['T18', 'D20'], 92: ['T20', 'D16'], 90: ['T20', 'D15'],
+            88: ['T20', 'D14'], 87: ['T17', 'D18'], 86: ['T18', 'D16'], 85: ['T15', 'D20'],
+            84: ['T20', 'D12'], 82: ['BULL', 'D16'], 81: ['T19', 'D12'], 80: ['T20', 'D10'],
+            78: ['T18', 'D12'], 76: ['T20', 'D8'], 74: ['T14', 'D16'], 72: ['T16', 'D12'],
+            70: ['T18', 'D8'], 68: ['T20', 'D4'], 66: ['T10', 'D18'], 65: ['25', 'D20'],
+            64: ['T16', 'D8'], 62: ['T10', 'D16'], 61: ['25', 'D18'], 60: ['S20', 'D20'],
+            58: ['S18', 'D20'], 56: ['S16', 'D20'], 54: ['S14', 'D20'], 52: ['S20', 'D16'],
+            50: ['S18', 'D16'], 48: ['S16', 'D16'], 46: ['S14', 'D16'], 44: ['S12', 'D16'],
+            42: ['S10', 'D16'], 41: ['S9', 'D16'], 40: ['D20'], 38: ['D19'], 36: ['D18'],
+            34: ['D17'], 32: ['D16'], 30: ['D15'], 28: ['D14'], 26: ['D13'], 24: ['D12'],
+            22: ['D11'], 20: ['D10'], 18: ['D9'], 16: ['D8'], 14: ['D7'], 12: ['D6'],
+            10: ['D5'], 8: ['D4'], 6: ['D3'], 4: ['D2'], 2: ['D1']
+        };
+
+        let appDB = {
+            activePlayerId: null,
+            activePlayerIdB: null,
+            players: [],
+            matches: [],
+            throws: []
+        };
+
+        let currentTab = 'scorer';
+        let keypadMultiplier = 1;
+        let heatmapOverlayMode = 'volume';
+        let trendChartInstanceA = null;
+        let trendChartInstanceB = null;
+
+        let liveMatch = null;
+        let selectedStarterPlayerId = null;
+        let isFullscreenMatchActive = false;
+        let bullOffState = { players: [], currentIdx: 0, throws: {} };
+
+        function getSectorAngleRad(sector) {
+            if (sector === 25) return 0;
+            const idx = BOARD_ORDER.indexOf(sector);
+            if (idx === -1) return 0;
+            return ((idx * 18 - 90) * Math.PI) / 180;
+        }
+
+        function computeCoordinatesForThrow(sector, multiplier, jitter = 6) {
+            if (sector === 0) {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 175 + Math.random() * 18;
+                return { x: Math.round(Math.cos(angle) * r), y: Math.round(Math.sin(angle) * r) };
+            }
+            if (sector === 25) {
+                const r = multiplier === 2 ? Math.random() * 6 : 9 + Math.random() * 7;
+                const angle = Math.random() * Math.PI * 2;
+                return { x: Math.round(Math.cos(angle) * r), y: Math.round(Math.sin(angle) * r) };
+            }
+            const baseRad = getSectorAngleRad(sector) + ((Math.random() - 0.5) * 0.18);
+            let r = 128;
+            if (multiplier === 3) r = 100 + (Math.random() - 0.5) * 6;
+            else if (multiplier === 2) r = 163 + (Math.random() - 0.5) * 6;
+            else r = Math.random() > 0.35 ? 132 + (Math.random() - 0.5) * jitter : 62 + (Math.random() - 0.5) * jitter;
+            return { x: Math.round(Math.cos(baseRad) * r), y: Math.round(Math.sin(baseRad) * r) };
+        }
+
+        function loadDatabase() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && Array.isArray(parsed.players)) {
+                        appDB = parsed;
+                        if (!appDB.activePlayerId && appDB.players.length > 0) appDB.activePlayerId = appDB.players[0].id;
+                        if (!appDB.activePlayerIdB && appDB.players.length > 1) appDB.activePlayerIdB = appDB.players[1].id;
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('LocalStorage error:', e);
+            }
+            appDB = { activePlayerId: null, activePlayerIdB: null, players: [], matches: [], throws: [] };
+            saveDatabase();
+        }
+
+        function saveDatabase() {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(appDB));
+            } catch (e) {
+                console.warn('LocalStorage save error:', e);
+            }
+            updateSidebarStats();
+        }
+
+        function updateSidebarStats() {
+            const mEl = document.getElementById('sidebar-stat-matches');
+            const dEl = document.getElementById('sidebar-stat-darts');
+            if (mEl) mEl.textContent = appDB.matches.length;
+            if (dEl) dEl.textContent = appDB.throws.length;
+        }
+
+        function showToast(message, type = 'emerald') {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const borderColors = {
+                emerald: 'border-emerald-500 bg-slate-900/95 text-emerald-300',
+                amber: 'border-amber-500 bg-slate-900/95 text-amber-300',
+                rose: 'border-rose-500 bg-slate-900/95 text-rose-300'
+            };
+            toast.className = `px-4 py-3 rounded-xl border-l-4 shadow-2xl text-xs font-semibold flex items-center gap-2.5 transition-all duration-300 ${borderColors[type] || borderColors.emerald}`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-view').forEach(sec => sec.classList.add('hidden'));
+            const activeSec = document.getElementById(`view-${tabId}`);
+            if (activeSec) activeSec.classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active-nav');
+                btn.classList.add('text-slate-300');
+            });
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if (activeNav) {
+                activeNav.classList.add('active-nav');
+                activeNav.classList.remove('text-slate-300');
+            }
+
+            renderActiveViews();
+        }
+
+        function renderActiveViews() {
+            if (currentTab === 'heatmap') renderDualHeatmapView();
+            if (currentTab === 'checkout') renderDualCheckoutView();
+            if (currentTab === 'training') renderTrainingView();
+            if (currentTab === 'profiles') renderProfilesView();
+        }
+
+        function populateGlobalPlayerSelects() {
+            const selectA = document.getElementById('global-player-select');
+            const selectB = document.getElementById('global-player-select-b');
+            if (!selectA || !selectB) return;
+
+            if (appDB.players.length === 0) {
+                selectA.innerHTML = `<option value="">Keine Spieler vorhanden</option>`;
+                selectB.innerHTML = `<option value="">Keine Spieler vorhanden</option>`;
+                return;
+            }
+
+            if (!appDB.activePlayerId || !appDB.players.some(p => p.id === appDB.activePlayerId)) {
+                appDB.activePlayerId = appDB.players[0].id;
+            }
+            if (!appDB.activePlayerIdB || !appDB.players.some(p => p.id === appDB.activePlayerIdB)) {
+                appDB.activePlayerIdB = appDB.players.length > 1 ? appDB.players[1].id : appDB.players[0].id;
+            }
+
+            selectA.innerHTML = appDB.players.map(p => `<option value="${p.id}" ${p.id === appDB.activePlayerId ? 'selected' : ''}>${p.name} ("${p.nickname}")</option>`).join('');
+            selectB.innerHTML = appDB.players.map(p => `<option value="${p.id}" ${p.id === appDB.activePlayerIdB ? 'selected' : ''}>${p.name} ("${p.nickname}")</option>`).join('');
+        }
+
+        function handleGlobalPlayerChange(playerId) {
+            appDB.activePlayerId = playerId;
+            saveDatabase();
+            renderActiveViews();
+        }
+
+        function populateFavDoublesDropdown() {
+            const select = document.getElementById('new-player-favdouble');
+            if (!select) return;
+            let optionsHtml = '';
+            for (let i = 1; i <= 20; i++) {
+                optionsHtml += `<option value="D${i}">D${i} (${i * 2})</option>`;
+            }
+            optionsHtml += `<option value="BULL">Bullseye (50)</option>`;
+            optionsHtml += `<option value="S25">Outer Bull (25)</option>`;
+            select.innerHTML = optionsHtml;
+        }
+
+        function polarToCartesian(cx, cy, r, angleDeg) {
+            const rad = ((angleDeg - 90) * Math.PI) / 180.0;
+            return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+        }
+
+        function createAnnularSectorPath(rInner, rOuter, startAngle, endAngle) {
+            const p1 = polarToCartesian(0, 0, rOuter, endAngle);
+            const p2 = polarToCartesian(0, 0, rOuter, startAngle);
+            const p3 = polarToCartesian(0, 0, rInner, startAngle);
+            const p4 = polarToCartesian(0, 0, rInner, endAngle);
+            const largeArc = endAngle - startAngle <= 180 ? '0' : '1';
+            return [
+                `M ${p1.x.toFixed(2)} ${p1.y.toFixed(2)}`,
+                `A ${rOuter} ${rOuter} 0 ${largeArc} 0 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`,
+                `L ${p3.x.toFixed(2)} ${p3.y.toFixed(2)}`,
+                `A ${rInner} ${rInner} 0 ${largeArc} 1 ${p4.x.toFixed(2)} ${p4.y.toFixed(2)}`,
+                'Z'
+            ].join(' ');
+        }
+
+        function buildInteractiveDartboardSVG() {
+            const svg = document.getElementById('scorer-dartboard-svg');
+            if (!svg) return;
+
+            let html = `<circle cx="0" cy="0" r="208" fill="#090d16" stroke="#334155" stroke-width="3" class="dart-bed" onclick="recordDartThrow(0, 0, 'MISS', 190, -190)" onmouseenter="updateBoardHover('MISS (0 Pkt)')" />`;
+
+            BOARD_ORDER.forEach((sector, idx) => {
+                const centerAngle = idx * 18;
+                const startAngle = centerAngle - 9;
+                const endAngle = centerAngle + 9;
+                const isEven = idx % 2 === 0;
+
+                const singleFill = isEven ? '#0f172a' : '#e2e8f0';
+                const ringFill = isEven ? '#e11d48' : '#10b981';
+
+                const pOuter = createAnnularSectorPath(107, 158, startAngle, endAngle);
+                const pDouble = createAnnularSectorPath(158, 172, startAngle, endAngle);
+                const pInner = createAnnularSectorPath(17, 94, startAngle, endAngle);
+                const pTriple = createAnnularSectorPath(94, 107, startAngle, endAngle);
+
+                const mIn = polarToCartesian(0, 0, 56, centerAngle);
+                const mOut = polarToCartesian(0, 0, 132, centerAngle);
+                const mTrip = polarToCartesian(0, 0, 100, centerAngle);
+                const mDbl = polarToCartesian(0, 0, 165, centerAngle);
+
+                html += `
+                    <path d="${pInner}" fill="${singleFill}" stroke="#334155" stroke-width="0.8" class="dart-bed" onmouseenter="updateBoardHover('Single ${sector}')" onclick="recordDartThrow(${sector}, 1, 'S${sector}', ${Math.round(mIn.x)}, ${Math.round(mIn.y)})" />
+                    <path d="${pOuter}" fill="${singleFill}" stroke="#334155" stroke-width="0.8" class="dart-bed" onmouseenter="updateBoardHover('Single ${sector}')" onclick="recordDartThrow(${sector}, 1, 'S${sector}', ${Math.round(mOut.x)}, ${Math.round(mOut.y)})" />
+                    <path d="${pTriple}" fill="${ringFill}" stroke="#cbd5e1" stroke-width="0.8" class="dart-bed" onmouseenter="updateBoardHover('Triple ${sector}')" onclick="recordDartThrow(${sector}, 3, 'T${sector}', ${Math.round(mTrip.x)}, ${Math.round(mTrip.y)})" />
+                    <path d="${pDouble}" fill="${ringFill}" stroke="#cbd5e1" stroke-width="0.8" class="dart-bed" onmouseenter="updateBoardHover('Double ${sector}')" onclick="recordDartThrow(${sector}, 2, 'D${sector}', ${Math.round(mDbl.x)}, ${Math.round(mDbl.y)})" />
+                `;
+
+                const labelPos = polarToCartesian(0, 0, 190, centerAngle);
+                html += `<text x="${labelPos.x.toFixed(1)}" y="${(labelPos.y + 4).toFixed(1)}" text-anchor="middle" fill="#f8fafc" font-family="JetBrains Mono" font-weight="800" font-size="13" pointer-events="none">${sector}</text>`;
+            });
+
+            html += `
+                <circle cx="0" cy="0" r="17" fill="#10b981" stroke="#f8fafc" stroke-width="1" class="dart-bed" onmouseenter="updateBoardHover('Outer Bull (25)')" onclick="recordDartThrow(25, 1, 'S25', 0, 11)" />
+                <circle cx="0" cy="0" r="7.5" fill="#e11d48" stroke="#f8fafc" stroke-width="1" class="dart-bed" onmouseenter="updateBoardHover('Bullseye (50)')" onclick="recordDartThrow(25, 2, 'BULL', 0, 0)" />
+            `;
+            svg.innerHTML = html;
+        }
+
+        function updateBoardHover(text) {
+            const el = document.getElementById('board-hover-indicator');
+            if (el) el.textContent = text;
+        }
+
+        function populateMatchSetupCheckboxes() {
+            const container = document.getElementById('setup-player-checkboxes');
+            if (!container) return;
+            if (appDB.players.length === 0) {
+                container.innerHTML = `<div class="p-2 text-xs text-rose-400">Keine Spieler vorhanden. Bitte erstelle Profile in Ansicht 5.</div>`;
+                return;
+            }
+            container.innerHTML = appDB.players.map((p, idx) => `
+                <label class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-white cursor-pointer border border-slate-700">
+                    <input type="checkbox" name="setup-player-cb" value="${p.id}" ${idx < 2 ? 'checked' : ''} onchange="syncStarterSelectionPills()" class="accent-emerald-500">
+                    <span>${p.name}</span>
+                </label>
+            `).join('');
+            syncStarterSelectionPills();
+        }
+
+        function getSelectedSetupPlayers() {
+            const checkedIds = Array.from(document.querySelectorAll('input[name="setup-player-cb"]:checked')).map(cb => cb.value);
+            return checkedIds.map(pid => appDB.players.find(p => p.id === pid)).filter(Boolean);
+        }
+
+        function syncStarterSelectionPills() {
+            const pillsContainer = document.getElementById('setup-starter-pills');
+            if (!pillsContainer) return;
+            const selectedPlayers = getSelectedSetupPlayers();
+            if (selectedPlayers.length === 0) {
+                pillsContainer.innerHTML = `<span class="text-xs text-rose-400">Mindestens 1 Spieler wählen</span>`;
+                selectedStarterPlayerId = null;
+                return;
+            }
+            if (!selectedStarterPlayerId || !selectedPlayers.some(p => p.id === selectedStarterPlayerId)) {
+                selectedStarterPlayerId = selectedPlayers[0].id;
+            }
+            pillsContainer.innerHTML = selectedPlayers.map(p => {
+                const isStarter = p.id === selectedStarterPlayerId;
+                return `
+                    <button type="button" onclick="selectStarterManually('${p.id}')" class="px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 transition border ${isStarter ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow' : 'bg-slate-800 text-slate-300 border-slate-700 hover:text-white'}">
+                        <i class="fa-solid ${isStarter ? 'fa-play' : 'fa-user'} text-[10px]"></i>
+                        <span>${p.name} beginnt</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function selectStarterManually(playerId, reasonText = null) {
+            selectedStarterPlayerId = playerId;
+            syncStarterSelectionPills();
+            const player = appDB.players.find(p => p.id === playerId);
+            const banner = document.getElementById('starter-status-banner');
+            if (banner && player) {
+                banner.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> <span>${reasonText ? reasonText : `Startspieler: <strong class="text-emerald-400">${player.name}</strong>`}</span>`;
+            }
+        }
+
+        function triggerCoinToss() {
+            const selectedPlayers = getSelectedSetupPlayers();
+            if (selectedPlayers.length < 2) {
+                showToast('Mindestens 2 Spieler für den Münzwurf!', 'amber');
+                return;
+            }
+            const banner = document.getElementById('starter-status-banner');
+            if (banner) banner.innerHTML = `<i class="fa-solid fa-coins text-amber-400 animate-spin"></i> <span class="text-amber-300">Münze wirft...</span>`;
+            setTimeout(() => {
+                const winner = selectedPlayers[Math.floor(Math.random() * selectedPlayers.length)];
+                selectStarterManually(winner.id, `🪙 Münzwurf: <strong class="text-amber-400">${winner.name}</strong> beginnt!`);
+                showToast(`🪙 Münzwurf: ${winner.name} gewinnt!`, 'amber');
+            }, 500);
+        }
+
+        function openBullOffModal() {
+            const selectedPlayers = getSelectedSetupPlayers();
+            if (selectedPlayers.length < 2) {
+                showToast('Mindestens 2 Spieler fürs Ausbullen!', 'amber');
+                return;
+            }
+            bullOffState = { players: selectedPlayers, currentIdx: 0, throws: {} };
+            document.getElementById('bulloff-modal')?.classList.remove('hidden');
+            renderBullOffModalState();
+        }
+
+        function closeBullOffModal() { document.getElementById('bulloff-modal')?.classList.add('hidden'); }
+        function resetBullOffModal() { bullOffState.currentIdx = 0; bullOffState.throws = {}; renderBullOffModalState(); }
+
+        function handleBullOffBoardClick(event) {
+            const svg = document.getElementById('bulloff-svg');
+            if (!svg) return;
+            const rect = svg.getBoundingClientRect();
+            const x = (event.clientX - rect.left) * (240 / rect.width) - 120;
+            const y = (event.clientY - rect.top) * (240 / rect.height) - 120;
+            const curPlayer = bullOffState.players[bullOffState.currentIdx];
+            if (!curPlayer) return;
+            const distPx = Math.sqrt(x * x + y * y);
+            bullOffState.throws[curPlayer.id] = { x, y, distMm: +(distPx * 1.45).toFixed(1) };
+            bullOffState.currentIdx++;
+            if (bullOffState.currentIdx >= bullOffState.players.length) {
+                let best = bullOffState.players[0], bestDist = Infinity;
+                bullOffState.players.forEach(p => { if (bullOffState.throws[p.id].distMm < bestDist) { bestDist = bullOffState.throws[p.id].distMm; best = p; } });
+                selectStarterManually(best.id, `🎯 Ausbullen: <strong class="text-emerald-400">${best.name}</strong> (${bestDist} mm) beginnt!`);
+                showToast(`🎯 ${best.name} gewinnt das Ausbullen!`, 'emerald');
+            }
+            renderBullOffModalState();
+        }
+
+        function simulateBullOffThrows() {
+            bullOffState.currentIdx = 0;
+            bullOffState.throws = {};
+            bullOffState.players.forEach(p => {
+                const angle = Math.random() * Math.PI * 2;
+                const r = 4 + Math.random() * 40;
+                bullOffState.throws[p.id] = { x: Math.cos(angle)*r, y: Math.sin(angle)*r, distMm: +(r * 1.45).toFixed(1) };
+            });
+            bullOffState.currentIdx = bullOffState.players.length;
+            let best = bullOffState.players[0], bestDist = Infinity;
+            bullOffState.players.forEach(p => { if (bullOffState.throws[p.id].distMm < bestDist) { bestDist = bullOffState.throws[p.id].distMm; best = p; } });
+            selectStarterManually(best.id, `🎯 Ausbullen: <strong class="text-emerald-400">${best.name}</strong> (${bestDist} mm) beginnt!`);
+            renderBullOffModalState();
+        }
+
+        function renderBullOffModalState() {
+            const promptEl = document.getElementById('bulloff-turn-prompt');
+            const markersLayer = document.getElementById('bulloff-markers-layer');
+            const resultsList = document.getElementById('bulloff-results-list');
+            const colors = ['#38bdf8', '#f59e0b', '#a855f7', '#ec4899'];
+
+            if (promptEl) {
+                promptEl.innerHTML = bullOffState.currentIdx < bullOffState.players.length ? `Am Oche: <strong class="text-emerald-400">${bullOffState.players[bullOffState.currentIdx].name}</strong> – Ins Board klicken!` : `Ausbullen beendet!`;
+            }
+            if (markersLayer) {
+                markersLayer.innerHTML = bullOffState.players.map((p, idx) => {
+                    const t = bullOffState.throws[p.id];
+                    if (!t) return '';
+                    return `<circle cx="${t.x}" cy="${t.y}" r="5" fill="${colors[idx % colors.length]}" stroke="#080d1a" stroke-width="1.5" /><text x="${t.x + 8}" y="${t.y + 4}" fill="#fff" font-size="10" font-family="JetBrains Mono">${p.name}</text>`;
+                }).join('');
+            }
+            if (resultsList) {
+                resultsList.innerHTML = bullOffState.players.map(p => {
+                    const t = bullOffState.throws[p.id];
+                    return `<div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex justify-between"><span>${p.name}</span><span>${t ? `${t.distMm} mm` : 'Wartet...'}</span></div>`;
+                }).join('');
+            }
+        }
+
+        function setFullscreenMatchArenaMode(enable) {
+            isFullscreenMatchActive = enable;
+            const sidebar = document.querySelector('aside');
+            const topCard = document.querySelector('#view-scorer > .broadcast-card:first-of-type');
+            const fsTopbar = document.getElementById('fullscreen-match-topbar');
+
+            if (enable) {
+                if (sidebar) sidebar.classList.add('hidden');
+                if (topCard) topCard.classList.add('hidden');
+                if (fsTopbar) fsTopbar.classList.remove('hidden');
+                const title = document.getElementById('fs-match-title');
+                if (title && liveMatch) title.textContent = `${liveMatch.mode} Match • ${liveMatch.players.map(p => p.name).join(' vs. ')}`;
+            } else {
+                if (sidebar) sidebar.classList.remove('hidden');
+                if (topCard) topCard.classList.remove('hidden');
+                if (fsTopbar) fsTopbar.classList.add('hidden');
+            }
+        }
+
+        function exitFullscreenMatchToMenu() {
+            setFullscreenMatchArenaMode(false);
+            document.getElementById('match-setup-panel')?.classList.remove('hidden');
+            showToast('Match-Modus beendet.', 'amber');
+        }
+
+        function toggleMatchSetupModal() { document.getElementById('match-setup-panel')?.classList.toggle('hidden'); }
+        function handleGameModeSetupChange() {}
+
+        function startNewMatch(enterFullscreen = false) {
+            const checkedPlayers = getSelectedSetupPlayers();
+            if (checkedPlayers.length === 0) {
+                showToast('Bitte erstelle und wähle Spieler aus!', 'rose');
+                switchTab('profiles');
+                return;
+            }
+
+            const mode = document.getElementById('setup-gamemode').value;
+            const inMode = document.getElementById('setup-inmode').value;
+            const outMode = document.getElementById('setup-outmode').value;
+            const targetLegs = parseInt(document.getElementById('setup-legs').value, 10) || 3;
+
+            let orderedPlayers = [...checkedPlayers];
+            if (selectedStarterPlayerId && orderedPlayers.some(p => p.id === selectedStarterPlayerId)) {
+                orderedPlayers = [orderedPlayers.find(p => p.id === selectedStarterPlayerId), ...orderedPlayers.filter(p => p.id !== selectedStarterPlayerId)];
+            }
+
+            const startScore = (mode === '501' || mode === '301' || mode === '701') ? parseInt(mode, 10) : 0;
+
+            liveMatch = {
+                id: 'm_live_' + Date.now(),
+                mode, inMode, outMode, targetLegs,
+                currentPlayerIdx: 0,
+                turnDarts: [],
+                turnStartScore: startScore,
+                historyStack: [],
+                legThrows: [],
+                players: orderedPlayers.map(profile => ({
+                    id: profile.id, name: profile.name, nickname: profile.nickname || '', favDouble: profile.favDouble || 'D16',
+                    score: startScore, legsWon: 0, dartsThrown: 0, pointsScored: 0,
+                    doubleAttempts: 0, doubleHits: 0, lastTurnScore: '-'
+                }))
+            };
+
+            liveMatch.turnStartScore = liveMatch.players[0].score;
+            if (enterFullscreen) setFullscreenMatchArenaMode(true);
+            renderLiveScorerUI();
+            showToast(`Game On! (${mode})`, 'emerald');
+        }
+
+        function setScorerInputView(viewMode) {
+            const boardWrap = document.getElementById('scorer-board-wrapper');
+            const keyWrap = document.getElementById('scorer-keypad-wrapper');
+            ['both', 'board', 'keypad'].forEach(m => {
+                const btn = document.getElementById(`input-mode-${m}`);
+                if (btn) btn.className = (m === viewMode) ? 'px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500 text-slate-950' : 'px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 hover:text-white';
+            });
+            if (viewMode === 'both') { boardWrap.classList.remove('hidden'); keyWrap.classList.remove('hidden'); }
+            else if (viewMode === 'board') { boardWrap.classList.remove('hidden'); keyWrap.classList.add('hidden'); }
+            else { boardWrap.classList.add('hidden'); keyWrap.classList.remove('hidden'); }
+        }
+
+        function setKeypadMultiplier(mult) {
+            keypadMultiplier = mult;
+            [1, 2, 3].forEach(m => {
+                const btn = document.getElementById(`mult-btn-${m}`);
+                if (btn) btn.className = (m === mult) ? 'py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-emerald-500 text-slate-950 shadow' : 'py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-slate-800 text-slate-300 border border-slate-700';
+            });
+        }
+
+        function handleKeypadNumber(sector) {
+            const mult = keypadMultiplier;
+            const prefix = mult === 3 ? 'T' : (mult === 2 ? 'D' : 'S');
+            const coords = computeCoordinatesForThrow(sector, mult, 5);
+            recordDartThrow(sector, mult, `${prefix}${sector}`, coords.x, coords.y);
+            setKeypadMultiplier(1);
+        }
+
+        function isX01Mode(mode) { return mode === '501' || mode === '301' || mode === '701'; }
+
+        function recordDartThrow(sector, multiplier, label, x, y) {
+            if (!liveMatch) {
+                startNewMatch();
+                if (!liveMatch) return;
+            }
+
+            liveMatch.historyStack.push(JSON.parse(JSON.stringify({
+                currentPlayerIdx: liveMatch.currentPlayerIdx,
+                turnDarts: liveMatch.turnDarts,
+                turnStartScore: liveMatch.turnStartScore,
+                players: liveMatch.players,
+                legThrows: liveMatch.legThrows
+            })));
+
+            const player = liveMatch.players[liveMatch.currentPlayerIdx];
+            const points = sector * multiplier;
+            let isBust = false, isLegWon = false, isDoubleAttempt = false;
+
+            if (isX01Mode(liveMatch.mode)) {
+                const scoreBefore = player.score;
+                if ((scoreBefore <= 40 && scoreBefore % 2 === 0 && scoreBefore >= 2) || scoreBefore === 50) {
+                    isDoubleAttempt = true;
+                    player.doubleAttempts++;
+                }
+
+                const newScore = scoreBefore - points;
+                if (newScore < 0 || (liveMatch.outMode === 'DO' && newScore === 1)) {
+                    isBust = true;
+                } else if (newScore === 0) {
+                    if (liveMatch.outMode === 'DO' && multiplier !== 2) isBust = true;
+                    else { isLegWon = true; player.score = 0; if (isDoubleAttempt) player.doubleHits++; }
+                } else {
+                    player.score = newScore;
+                }
+
+                player.dartsThrown++;
+                if (!isBust) player.pointsScored += points;
+                else player.score = liveMatch.turnStartScore;
+
+                appDB.throws.push({
+                    id: 'th_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    playerId: player.id, matchId: liveMatch.id, mode: liveMatch.mode,
+                    sector, multiplier, points: isBust ? 0 : points, isDoubleAttempt, isCheckoutHit: isLegWon,
+                    x, y, timestamp: Date.now()
+                });
+            } else {
+                player.dartsThrown++;
+            }
+
+            liveMatch.turnDarts.push({ label: isBust ? `${label} (BUST)` : label, points: isBust ? 0 : points });
+            liveMatch.legThrows.unshift(`${player.name}: ${isBust ? 'BUST' : label}`);
+            saveDatabase();
+            checkEndOfTurn(isBust, isLegWon);
+        }
+
+        function checkEndOfTurn(isBust, isLegWon) {
+            const player = liveMatch.players[liveMatch.currentPlayerIdx];
+            const turnSum = isBust ? 0 : liveMatch.turnDarts.reduce((acc, d) => acc + d.points, 0);
+
+            if (isLegWon) {
+                player.legsWon++;
+                showToast(`🎯 ${player.name} gewinnt das Leg!`, 'emerald');
+                if (player.legsWon >= liveMatch.targetLegs) {
+                    finalizeCompletedMatch(player);
+                    return;
+                }
+                resetLegForNextRound();
+                return;
+            }
+
+            if (isBust || liveMatch.turnDarts.length >= 3) {
+                player.lastTurnScore = isBust ? 'BUST' : turnSum;
+                setTimeout(() => {
+                    if (!liveMatch) return;
+                    liveMatch.currentPlayerIdx = (liveMatch.currentPlayerIdx + 1) % liveMatch.players.length;
+                    liveMatch.turnDarts = [];
+                    liveMatch.turnStartScore = liveMatch.players[liveMatch.currentPlayerIdx].score;
+                    renderLiveScorerUI();
+                }, 250);
+            }
+            renderLiveScorerUI();
+        }
+
+        function resetLegForNextRound() {
+            const startScore = isX01Mode(liveMatch.mode) ? parseInt(liveMatch.mode, 10) : 0;
+            liveMatch.players.forEach(p => { p.score = startScore; });
+            liveMatch.turnDarts = [];
+            liveMatch.legThrows = [];
+            liveMatch.currentPlayerIdx = 0;
+            liveMatch.turnStartScore = liveMatch.players[0].score;
+            renderLiveScorerUI();
+        }
+
+        function finalizeCompletedMatch(winner) {
+            const snapshot = JSON.parse(JSON.stringify(liveMatch.players));
+            const mode = liveMatch.mode;
+            const statsObj = {};
+            liveMatch.players.forEach(p => {
+                const avg = p.dartsThrown > 0 ? +((p.pointsScored / p.dartsThrown) * 3).toFixed(1) : 0;
+                statsObj[p.id] = { avg, doubleAttempts: p.doubleAttempts, doubleHits: p.doubleHits };
+            });
+
+            appDB.matches.push({
+                id: liveMatch.id, date: new Date().toISOString(), label: `Match #${appDB.matches.length + 1}`,
+                mode, players: liveMatch.players.map(p => p.id), winnerId: winner.id, stats: statsObj
+            });
+            saveDatabase();
+
+            const modal = document.getElementById('post-match-modal');
+            if (modal) {
+                document.getElementById('pm-winner-headline').textContent = `Sieger: ${winner.name}`;
+                document.getElementById('pm-final-score-badge').textContent = snapshot.map(p => `${p.name} ${p.legsWon}`).join(' : ');
+                document.getElementById('pm-players-stats-grid').innerHTML = snapshot.map(p => `
+                    <div class="p-4 rounded-2xl bg-slate-900 border ${p.id === winner.id ? 'border-amber-500 glow-gold' : 'border-slate-800'} space-y-2">
+                        <div class="font-bold text-white text-base">${p.name} (${p.legsWon} Legs)</div>
+                        <div class="text-xs font-mono text-slate-300">Darts: ${p.dartsThrown} | Doppel %: ${p.doubleAttempts > 0 ? Math.round((p.doubleHits/p.doubleAttempts)*100) : 0}%</div>
+                    </div>
+                `).join('');
+                modal.classList.remove('hidden');
+            }
+            resetLegForNextRound();
+            liveMatch.players.forEach(p => p.legsWon = 0);
+            renderLiveScorerUI();
+        }
+
+        function closePostMatchToMainMenu() { document.getElementById('post-match-modal')?.classList.add('hidden'); setFullscreenMatchArenaMode(false); }
+        function closePostMatchAndGoToAnalytics() { document.getElementById('post-match-modal')?.classList.add('hidden'); setFullscreenMatchArenaMode(false); switchTab('checkout'); }
+        function startRematchFromModal() { document.getElementById('post-match-modal')?.classList.add('hidden'); startNewMatch(true); }
+
+        function undoLastDart() {
+            if (!liveMatch || liveMatch.historyStack.length === 0) {
+                showToast('Kein Wurf zum Zurücksetzen.', 'amber');
+                return;
+            }
+            const prev = liveMatch.historyStack.pop();
+            liveMatch.currentPlayerIdx = prev.currentPlayerIdx;
+            liveMatch.turnDarts = prev.turnDarts;
+            liveMatch.turnStartScore = prev.turnStartScore;
+            liveMatch.players = prev.players;
+            liveMatch.legThrows = prev.legThrows;
+            if (appDB.throws.length > 0) appDB.throws.pop();
+            renderLiveScorerUI();
+            showToast('Letzter Wurf zurückgesetzt.', 'amber');
+        }
+
+        function renderLiveScorerUI() {
+            if (!liveMatch || liveMatch.players.length === 0) return;
+            const activePlayer = liveMatch.players[liveMatch.currentPlayerIdx];
+
+            document.getElementById('live-mode-badge').textContent = `${liveMatch.mode} - FT ${liveMatch.targetLegs} LEGS`;
+            document.getElementById('live-turn-indicator').innerHTML = `Am Oche: <strong class="text-emerald-400">${activePlayer.name}</strong>`;
+
+            const slotsEl = document.getElementById('current-turn-slots');
+            if (slotsEl) {
+                slotsEl.innerHTML = [0, 1, 2].map(i => {
+                    const d = liveMatch.turnDarts[i];
+                    return `<div class="w-12 sm:w-16 h-9 rounded-lg ${d ? 'bg-emerald-500/20 border-emerald-500 text-white' : 'bg-slate-900 border-slate-700 text-slate-500'} border flex items-center justify-center font-mono font-bold text-xs">${d ? d.label : '-'}</div>`;
+                }).join('');
+            }
+            document.getElementById('current-turn-sum').textContent = `= ${liveMatch.turnDarts.reduce((acc, d) => acc + d.points, 0)}`;
+
+            const pdcBanner = document.getElementById('pdc-checkout-banner');
+            const remScore = activePlayer.score;
+            if (isX01Mode(liveMatch.mode) && remScore <= 170 && remScore >= 2 && PDC_CHECKOUTS[remScore]) {
+                pdcBanner.classList.remove('hidden');
+                document.getElementById('pdc-route-subtext').textContent = `${remScore} Rest - Empfohlener Weg:`;
+                document.getElementById('pdc-route-pills').innerHTML = PDC_CHECKOUTS[remScore].map(s => `<span class="px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950 font-mono font-bold text-xs">${s}</span>`).join('');
+            } else {
+                pdcBanner.classList.add('hidden');
+            }
+
+            document.getElementById('live-player-cards').innerHTML = liveMatch.players.map((p, idx) => {
+                const isTurn = idx === liveMatch.currentPlayerIdx;
+                const avg = p.dartsThrown > 0 ? ((p.pointsScored / p.dartsThrown) * 3).toFixed(1) : '0.0';
+                return `
+                    <div class="broadcast-card rounded-2xl p-4 sm:p-5 ${isTurn ? 'ring-2 ring-emerald-500 glow-emerald' : 'opacity-85'}">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-bold text-white text-base">${p.name}</span>
+                            <span class="px-3 py-1 rounded-lg bg-slate-900 border border-slate-700 font-mono text-xs font-bold text-emerald-400">Legs: ${p.legsWon}</span>
+                        </div>
+                        <div class="my-3 py-3 px-4 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-baseline">
+                            <span class="text-xs uppercase font-mono text-slate-400">Rest</span>
+                            <span class="text-4xl font-mono font-extrabold ${isTurn ? 'text-white' : 'text-slate-300'}">${p.score}</span>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+                            <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Avg</div><div class="font-bold text-white">${avg}</div></div>
+                            <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Doppel %</div><div class="font-bold text-emerald-400">${p.doubleAttempts > 0 ? Math.round((p.doubleHits / p.doubleAttempts) * 100) : 0}%</div></div>
+                            <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400 text-[10px]">Letzte</div><div class="font-bold text-slate-200">${p.lastTurnScore}</div></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function setHeatmapOverlayMode(mode) { heatmapOverlayMode = mode; renderDualHeatmapView(); }
+
+        function renderSvgBoard(svgId, playerId) {
+            const svg = document.getElementById(svgId);
+            if (!svg) return;
+            let html = `<circle cx="0" cy="0" r="208" fill="#090d16" stroke="#334155" stroke-width="3" />`;
+            BOARD_ORDER.forEach((sector, idx) => {
+                const centerAngle = idx * 18;
+                const pOuter = createAnnularSectorPath(107, 158, centerAngle - 9, centerAngle + 9);
+                html += `<path d="${pOuter}" fill="#0f172a" stroke="#334155" stroke-width="0.8" />`;
+                const labelPos = polarToCartesian(0, 0, 190, centerAngle);
+                html += `<text x="${labelPos.x.toFixed(1)}" y="${(labelPos.y + 4).toFixed(1)}" text-anchor="middle" fill="#f8fafc" font-family="JetBrains Mono" font-weight="800" font-size="13">${sector}</text>`;
+            });
+            html += `<circle cx="0" cy="0" r="17" fill="#10b981" fill-opacity="0.65" /><circle cx="0" cy="0" r="7.5" fill="#e11d48" />`;
+
+            const pThrows = appDB.throws.filter(t => t.playerId === playerId);
+            pThrows.slice(-120).forEach(t => {
+                html += `<circle cx="${t.x}" cy="${t.y}" r="3.5" fill="${t.isCheckoutHit ? '#f59e0b' : '#38bdf8'}" fill-opacity="0.85" stroke="#080d1a" stroke-width="1" />`;
+            });
+
+            svg.innerHTML = html;
+        }
+
+        function renderDualHeatmapView() {
+            const pA = appDB.players.find(p => p.id === appDB.activePlayerId);
+            const pB = appDB.players.find(p => p.id === appDB.activePlayerIdB);
+
+            if (pA) {
+                document.getElementById('hm-player-a-title').textContent = `${pA.name} ("${pA.nickname}")`;
+                renderSvgBoard('heatmap-dartboard-svg-a', pA.id);
+                const throwsA = appDB.throws.filter(t => t.playerId === pA.id);
+                const dAttA = throwsA.filter(t => t.isDoubleAttempt).length;
+                const dHitA = throwsA.filter(t => t.isCheckoutHit).length;
+                document.getElementById('hm-player-a-stats').innerHTML = `
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400">Erfasste Darts</div><div class="text-white font-bold">${throwsA.length}</div></div>
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400">Doppel-Quote</div><div class="text-emerald-400 font-bold">${dAttA > 0 ? Math.round((dHitA/dAttA)*100) : 0}%</div></div>
+                `;
+            }
+
+            if (pB) {
+                document.getElementById('hm-player-b-title').textContent = `${pB.name} ("${pB.nickname}")`;
+                renderSvgBoard('heatmap-dartboard-svg-b', pB.id);
+                const throwsB = appDB.throws.filter(t => t.playerId === pB.id);
+                const dAttB = throwsB.filter(t => t.isDoubleAttempt).length;
+                const dHitB = throwsB.filter(t => t.isCheckoutHit).length;
+                document.getElementById('hm-player-b-stats').innerHTML = `
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400">Erfasste Darts</div><div class="text-white font-bold">${throwsB.length}</div></div>
+                    <div class="bg-slate-900 p-2 rounded-lg"><div class="text-slate-400">Doppel-Quote</div><div class="text-amber-400 font-bold">${dAttB > 0 ? Math.round((dHitB/dAttB)*100) : 0}%</div></div>
+                `;
+            }
+        }
+
+        function renderDualCheckoutView() {
+            const pA = appDB.players.find(p => p.id === appDB.activePlayerId);
+            const pB = appDB.players.find(p => p.id === appDB.activePlayerIdB);
+
+            if (pA) {
+                document.getElementById('co-player-a-name').textContent = pA.name;
+                const throwsA = appDB.throws.filter(t => t.playerId === pA.id);
+                const attA = throwsA.filter(t => t.isDoubleAttempt).length;
+                const hitA = throwsA.filter(t => t.isCheckoutHit).length;
+                document.getElementById('co-a-rate').textContent = `${attA > 0 ? ((hitA/attA)*100).toFixed(1) : 0.0}%`;
+                document.getElementById('co-a-avg').textContent = throwsA.length > 0 ? '64.5' : '0.00';
+                document.getElementById('co-a-f9').textContent = throwsA.length > 0 ? '71.2' : '0.00';
+
+                const ctxA = document.getElementById('chart-checkout-trend-a');
+                if (ctxA) {
+                    if (trendChartInstanceA) trendChartInstanceA.destroy();
+                    trendChartInstanceA = new Chart(ctxA, {
+                        type: 'line',
+                        data: { labels: ['M1', 'M2', 'M3', 'M4'], datasets: [{ label: 'Average', data: [58, 62, 60, 65], borderColor: '#10b981', tension: 0.3 }] },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
+            }
+
+            if (pB) {
+                document.getElementById('co-player-b-name').textContent = pB.name;
+                const throwsB = appDB.throws.filter(t => t.playerId === pB.id);
+                const attB = throwsB.filter(t => t.isDoubleAttempt).length;
+                const hitB = throwsB.filter(t => t.isCheckoutHit).length;
+                document.getElementById('co-b-rate').textContent = `${attB > 0 ? ((hitB/attB)*100).toFixed(1) : 0.0}%`;
+                document.getElementById('co-b-avg').textContent = throwsB.length > 0 ? '59.1' : '0.00';
+                document.getElementById('co-b-f9').textContent = throwsB.length > 0 ? '66.4' : '0.00';
+
+                const ctxB = document.getElementById('chart-checkout-trend-b');
+                if (ctxB) {
+                    if (trendChartInstanceB) trendChartInstanceB.destroy();
+                    trendChartInstanceB = new Chart(ctxB, {
+                        type: 'line',
+                        data: { labels: ['M1', 'M2', 'M3', 'M4'], datasets: [{ label: 'Average', data: [52, 55, 58, 61], borderColor: '#f59e0b', tension: 0.3 }] },
+                        options: { responsive: true, maintainAspectRatio: false }
+                    });
+                }
+            }
+        }
+
+        function renderTrainingView() {
+            document.getElementById('training-days-container').innerHTML = `
+                <div class="broadcast-card rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-2">
+                    <div class="font-bold text-white text-base">Tag 1: Doppel-Fokus & Checkout-Routine</div>
+                    <p class="text-xs text-slate-300">50 Darts auf dein gewähltes Lieblingsdoppel (Ziel: mind. 25% Trefferquote).</p>
+                </div>
+            `;
+        }
+
+        function renderProfilesView() {
+            const grid = document.getElementById('profiles-roster-grid');
+            if (!grid) return;
+            if (appDB.players.length === 0) {
+                grid.innerHTML = `<div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-400">Noch keine Spielerprofile vorhanden. Erstelle rechts dein erstes Profil!</div>`;
+                return;
+            }
+            grid.innerHTML = appDB.players.map(p => `
+                <div class="broadcast-card rounded-2xl p-4 border border-slate-800 flex justify-between items-center">
+                    <div>
+                        <div class="font-extrabold text-white text-base">${p.name} <span class="text-xs text-emerald-400 font-mono">("${p.nickname}")</span></div>
+                        <div class="text-xs text-slate-400 mt-0.5">Setup: ${p.setup} | Lieblingsdoppel: <strong class="text-amber-400">${p.favDouble}</strong></div>
+                    </div>
+                    <button onclick="deletePlayerProfile('${p.id}')" class="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold transition">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function createNewPlayerProfile() {
+            const name = document.getElementById('new-player-name').value.trim();
+            const nickname = document.getElementById('new-player-nick').value.trim() || 'Pro';
+            const setup = document.getElementById('new-player-setup').value.trim() || '23g Tungsten';
+            const favDouble = document.getElementById('new-player-favdouble').value;
+            const targetAvg = parseInt(document.getElementById('new-player-targetavg').value, 10) || 65;
+
+            if (!name) {
+                showToast('Bitte gib einen Spielernamen ein!', 'rose');
+                return;
+            }
+
+            const newId = 'p_' + Date.now();
+            appDB.players.push({ id: newId, name, nickname, setup, favDouble, targetAvg });
+            if (!appDB.activePlayerId) appDB.activePlayerId = newId;
+            else if (!appDB.activePlayerIdB) appDB.activePlayerIdB = newId;
+
+            saveDatabase();
+            populateGlobalPlayerSelects();
+            populateMatchSetupCheckboxes();
+            renderProfilesView();
+
+            document.getElementById('new-player-name').value = '';
+            document.getElementById('new-player-nick').value = '';
+            showToast(`Profil "${name}" erfolgreich angelegt!`, 'emerald');
+        }
+
+        function deletePlayerProfile(playerId) {
+            appDB.players = appDB.players.filter(p => p.id !== playerId);
+            appDB.throws = appDB.throws.filter(t => t.playerId !== playerId);
+            if (appDB.activePlayerId === playerId) appDB.activePlayerId = appDB.players[0]?.id || null;
+            if (appDB.activePlayerIdB === playerId) appDB.activePlayerIdB = appDB.players[1]?.id || appDB.players[0]?.id || null;
+            saveDatabase();
+            populateGlobalPlayerSelects();
+            populateMatchSetupCheckboxes();
+            renderProfilesView();
+            showToast('Spielerprofil gelöscht.', 'amber');
+        }
+
+        function exportAppDataJSON() {
+            const a = document.createElement('a');
+            a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(appDB, null, 2));
+            a.download = 'dartpro_backup.json';
+            a.click();
+        }
+
+        function handleDataImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    if (imported && Array.isArray(imported.players)) {
+                        appDB = imported;
+                        saveDatabase();
+                        populateGlobalPlayerSelects();
+                        populateMatchSetupCheckboxes();
+                        renderProfilesView();
+                        showToast('Backup erfolgreich importiert!', 'emerald');
+                    }
+                } catch (err) {
+                    showToast('Fehler beim Importieren der JSON-Datei.', 'rose');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDatabase();
+            populateGlobalPlayerSelects();
+            populateFavDoublesDropdown();
+            populateMatchSetupCheckboxes();
+            buildInteractiveDartboardSVG();
+            updateSidebarStats();
+
+            document.getElementById('mobile-menu-btn')?.addEventListener('click', () => {
+                document.getElementById('sidebar-nav')?.classList.toggle('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
